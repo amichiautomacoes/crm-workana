@@ -1,0 +1,16 @@
+streamlit
+pandas
+numpy
+plotly
+
+supabase
+python-dotenv
+
+google-api-python-client
+google-auth
+google-auth-oauthlib
+gspread
+google-cloud-storage
+
+openpyxl
+pyarrow
