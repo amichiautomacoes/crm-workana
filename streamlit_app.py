@@ -405,63 +405,72 @@ def render_evolucao_desligamentos(df: pd.DataFrame) -> None:
 
 
 def render_tempo_permanencia(df: pd.DataFrame) -> None:
-    distribuicao = (
-        df["faixa_permanencia"]
-        .value_counts()
-        .reindex(FAIXAS_PERMANENCIA, fill_value=0)
-        .rename_axis("Faixa")
-        .reset_index(name="Colaboradores")
-    )
-    total = int(distribuicao["Colaboradores"].sum())
-    distribuicao["Percentual"] = (
-        distribuicao["Colaboradores"].div(total).mul(100).round(1) if total else 0
-    )
-    distribuicao["Rotulo"] = distribuicao["Colaboradores"].map(
-        lambda valor: f"{valor} colaboradores"
-    )
+    with st.container(border=True):
+        st.markdown(
+            '<div class="chart-title">Tempo de Perman\u00eancia na Empresa</div>',
+            unsafe_allow_html=True,
+        )
 
-    fig = px.bar(
-        distribuicao,
-        x="Colaboradores",
-        y="Faixa",
-        orientation="h",
-        text="Rotulo",
-        color="Faixa",
-        color_discrete_map={
-            "Ate 3 anos": "#06b6d4",
-            "3 a 4 anos": "#14b8a6",
-            "4 a 5 anos": "#8b5cf6",
-            "Mais de 5 anos": "#f97316",
-        },
-        category_orders={"Faixa": list(FAIXAS_PERMANENCIA)},
-        custom_data=["Percentual"],
-    )
-    fig.update_traces(
-        textposition="outside",
-        cliponaxis=False,
-        hovertemplate=(
-            "%{y}<br>"
-            "Colaboradores: %{x}<br>"
-            "Participacao: %{customdata[0]:.1f}%<extra></extra>"
-        ),
-    )
-    fig.update_layout(
-        title="Tempo de permanencia",
-        showlegend=False,
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=8, r=90, t=52, b=8),
-        xaxis=dict(
-            title="Quantidade de colaboradores",
-            rangemode="tozero",
-            dtick=1,
-            showgrid=True,
-            gridcolor="#e5e9f2",
-        ),
-        yaxis=dict(title="", autorange="reversed"),
-    )
+        distribuicao = (
+            df["faixa_permanencia"]
+            .value_counts()
+            .reindex(FAIXAS_PERMANENCIA, fill_value=0)
+            .rename_axis("Faixa")
+            .reset_index(name="Colaboradores")
+        )
+        total = int(distribuicao["Colaboradores"].sum())
+        distribuicao["Percentual"] = (
+            distribuicao["Colaboradores"].div(total).mul(100).round(1) if total else 0
+        )
+        distribuicao["Rotulo"] = distribuicao.apply(
+            lambda linha: (
+                f"{int(linha['Colaboradores'])} colaboradores "
+                f"({linha['Percentual']:.1f}%)".replace(".", ",")
+            ),
+            axis=1,
+        )
 
-    st.plotly_chart(fig, use_container_width=True)
+        fig = px.bar(
+            distribuicao,
+            x="Colaboradores",
+            y="Faixa",
+            orientation="h",
+            text="Rotulo",
+            color="Faixa",
+            color_discrete_map={
+                "Ate 3 anos": "#06b6d4",
+                "3 a 4 anos": "#14b8a6",
+                "4 a 5 anos": "#8b5cf6",
+                "Mais de 5 anos": "#f97316",
+            },
+            category_orders={"Faixa": list(FAIXAS_PERMANENCIA)},
+            custom_data=["Percentual"],
+        )
+        fig.update_traces(
+            textposition="outside",
+            cliponaxis=False,
+            hovertemplate=(
+                "%{y}<br>"
+                "Colaboradores: %{x}<br>"
+                "Participacao: %{customdata[0]:.1f}%<extra></extra>"
+            ),
+        )
+        fig.update_layout(
+            showlegend=False,
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=8, r=128, t=8, b=8),
+            xaxis=dict(
+                title="Quantidade de colaboradores",
+                rangemode="tozero",
+                dtick=1,
+                showgrid=True,
+                gridcolor="#e5e9f2",
+            ),
+            yaxis=dict(title="", autorange="reversed"),
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def render_permanencia_media_area(df: pd.DataFrame) -> None:
