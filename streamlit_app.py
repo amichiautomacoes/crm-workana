@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -22,20 +23,6 @@ FAIXAS_PERMANENCIA = (
     "3 a 4 anos",
     "4 a 5 anos",
     "Mais de 5 anos",
-)
-AREAS_RANKING_PERMANENCIA = (
-    "Financeiro",
-    "BI",
-    "Pessoas",
-    "Tecnologia",
-    "Produto",
-)
-SENIORIDADES_RANKING_PERMANENCIA = (
-    "Pleno",
-    "Analista J\u00fanior",
-    "S\u00eanior",
-    "Gerente",
-    "C-Level",
 )
 
 
@@ -473,119 +460,91 @@ def render_tempo_permanencia(df: pd.DataFrame) -> None:
         st.plotly_chart(fig, use_container_width=True)
 
 
-def render_permanencia_media_area(df: pd.DataFrame) -> None:
-    ranking = (
-        df[df["area"].isin(AREAS_RANKING_PERMANENCIA)]
-        .dropna(subset=["tempo_permanencia_anos"])
-        .groupby("area", as_index=False)["tempo_permanencia_anos"]
-        .mean()
-        .rename(columns={"area": "Area", "tempo_permanencia_anos": "Permanencia media"})
-    )
-
-    ranking["Permanencia media"] = ranking["Permanencia media"].round(1)
-    ranking = ranking.sort_values("Permanencia media", ascending=True)
-    ranking["Rotulo"] = ranking["Permanencia media"].map(lambda valor: f"{valor:.1f} anos")
-
-    fig = px.bar(
-        ranking,
-        x="Permanencia media",
-        y="Area",
-        orientation="h",
-        text="Rotulo",
-        color="Area",
-        color_discrete_map={
-            "Financeiro": "#06b6d4",
-            "BI": "#14b8a6",
-            "Pessoas": "#8b5cf6",
-            "Tecnologia": "#f97316",
-            "Produto": "#2563eb",
-        },
-    )
-    fig.update_traces(
-        textposition="outside",
-        cliponaxis=False,
-        hovertemplate="%{y}<br>Permanencia media: %{x:.1f} anos<extra></extra>",
-    )
-    fig.update_layout(
-        title="Permanencia media por area",
-        showlegend=False,
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=8, r=96, t=52, b=8),
-        xaxis=dict(
-            title="Tempo medio de permanencia",
-            ticksuffix=" anos",
-            rangemode="tozero",
-            showgrid=True,
-            gridcolor="#e5e9f2",
-        ),
-        yaxis=dict(title=""),
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-
-def render_permanencia_media_senioridade(df: pd.DataFrame) -> None:
-    ranking = (
-        df[df["senioridade"].isin(SENIORIDADES_RANKING_PERMANENCIA)]
-        .dropna(subset=["tempo_permanencia_anos"])
-        .groupby("senioridade", as_index=False)["tempo_permanencia_anos"]
-        .mean()
-        .rename(
-            columns={
-                "senioridade": "Senioridade",
-                "tempo_permanencia_anos": "Permanencia media",
-            }
+def render_heatmap_permanencia_media(df: pd.DataFrame) -> None:
+    with st.container(border=True):
+        st.markdown(
+            '<div class="chart-title">Tempo M\u00e9dio de Perman\u00eancia</div>',
+            unsafe_allow_html=True,
         )
-    )
 
-    ranking["Permanencia media"] = ranking["Permanencia media"].round(1)
-    ranking["Senioridade"] = pd.Categorical(
-        ranking["Senioridade"],
-        categories=SENIORIDADES_RANKING_PERMANENCIA,
-        ordered=True,
-    )
-    ranking = ranking.sort_values("Permanencia media", ascending=True)
-    ranking["Rotulo"] = ranking["Permanencia media"].map(lambda valor: f"{valor:.1f} anos")
+        chart_col, selector_col = st.columns([4, 1])
+        with selector_col:
+            dimensao = st.selectbox(
+                "Visualizar por",
+                ("\u00c1rea", "Cargo"),
+                key="heatmap_permanencia_dimensao",
+            )
 
-    fig = px.bar(
-        ranking,
-        x="Permanencia media",
-        y="Senioridade",
-        orientation="h",
-        text="Rotulo",
-        color="Senioridade",
-        color_discrete_map={
-            "Pleno": "#06b6d4",
-            "Analista J\u00fanior": "#14b8a6",
-            "S\u00eanior": "#8b5cf6",
-            "Gerente": "#f97316",
-            "C-Level": "#2563eb",
-        },
-        category_orders={"Senioridade": list(SENIORIDADES_RANKING_PERMANENCIA)},
-    )
-    fig.update_traces(
-        textposition="outside",
-        cliponaxis=False,
-        hovertemplate="%{y}<br>Permanencia media: %{x:.1f} anos<extra></extra>",
-    )
-    fig.update_layout(
-        title="Permanencia por senioridade",
-        showlegend=False,
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=8, r=96, t=52, b=8),
-        xaxis=dict(
-            title="Tempo medio de permanencia",
-            ticksuffix=" anos",
-            rangemode="tozero",
-            showgrid=True,
-            gridcolor="#e5e9f2",
-        ),
-        yaxis=dict(title="", autorange="reversed"),
-    )
+        coluna = "area" if dimensao == "\u00c1rea" else "senioridade"
+        rotulo_dimensao = "\u00c1rea" if dimensao == "\u00c1rea" else "Cargo"
+        dados_heatmap = (
+            df.dropna(subset=[coluna, "tempo_permanencia_anos"])
+            .loc[lambda dados: dados[coluna] != ""]
+            .groupby(coluna, as_index=False)
+            .agg(
+                permanencia_media=("tempo_permanencia_anos", "mean"),
+                colaboradores=("nome_completo", "count"),
+            )
+            .sort_values("permanencia_media", ascending=False)
+        )
 
-    st.plotly_chart(fig, use_container_width=True)
+        with chart_col:
+            if dados_heatmap.empty:
+                st.info(
+                    "N\u00e3o h\u00e1 dados suficientes para calcular perman\u00eancia "
+                    "m\u00e9dia."
+                )
+                return
+
+            dados_heatmap["permanencia_media"] = dados_heatmap[
+                "permanencia_media"
+            ].round(1)
+            valores = dados_heatmap["permanencia_media"].tolist()
+            categorias = dados_heatmap[coluna].tolist()
+            textos = [[formatar_anos(valor) for valor in valores]]
+            customdata = [dados_heatmap["colaboradores"].tolist()]
+
+            fig = go.Figure(
+                data=go.Heatmap(
+                    z=[valores],
+                    x=categorias,
+                    y=["Tempo m\u00e9dio"],
+                    text=textos,
+                    customdata=customdata,
+                    texttemplate="%{text}",
+                    textfont=dict(color="#111827", size=14),
+                    colorscale=[
+                        [0, "#e0f2fe"],
+                        [0.5, "#22d3ee"],
+                        [1, "#f97316"],
+                    ],
+                    colorbar=dict(
+                        title="Anos",
+                        thickness=14,
+                        len=0.72,
+                    ),
+                    hovertemplate=(
+                        f"{rotulo_dimensao}: %{{x}}<br>"
+                        "Tempo m\u00e9dio: %{z:.1f} anos<br>"
+                        "Colaboradores: %{customdata}<extra></extra>"
+                    ),
+                )
+            )
+            fig.update_layout(
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                margin=dict(l=8, r=8, t=8, b=8),
+                height=310,
+                xaxis=dict(
+                    title=rotulo_dimensao,
+                    tickangle=0,
+                    side="bottom",
+                    automargin=True,
+                ),
+                yaxis=dict(title=""),
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
 
 
 def render_salario_permanencia(df: pd.DataFrame) -> None:
@@ -757,10 +716,7 @@ def main() -> None:
     render_tempo_permanencia(df_filtrado)
     st.divider()
 
-    render_permanencia_media_area(df_filtrado)
-    st.divider()
-
-    render_permanencia_media_senioridade(df_filtrado)
+    render_heatmap_permanencia_media(df_filtrado)
     st.divider()
 
     render_salario_permanencia(df_filtrado)
