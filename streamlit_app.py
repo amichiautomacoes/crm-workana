@@ -639,43 +639,98 @@ def render_salario_permanencia(df: pd.DataFrame) -> None:
 
 
 def render_graficos(df: pd.DataFrame) -> None:
-    col1, col2 = st.columns(2)
+    with st.container(border=True):
+        st.markdown(
+            '<div class="chart-title">Desligamentos por \u00c1rea</div>',
+            unsafe_allow_html=True,
+        )
 
-    por_area = df.groupby("area", as_index=False).size().sort_values("size", ascending=False)
-    fig_area = px.bar(
-        por_area,
-        x="area",
-        y="size",
-        labels={"area": "Area", "size": "Desligamentos"},
-        color_discrete_sequence=["#14b8a6"],
-    )
-    fig_area.update_layout(
-        title="Desligamentos por area",
-        showlegend=False,
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=8, r=8, t=48, b=8),
-    )
-    col1.plotly_chart(fig_area, use_container_width=True)
+        por_area = (
+            df.groupby("area", as_index=False)
+            .size()
+            .rename(columns={"area": "\u00c1rea", "size": "Desligamentos"})
+            .sort_values("Desligamentos", ascending=False)
+        )
+        fig_area = px.treemap(
+            por_area,
+            path=["\u00c1rea"],
+            values="Desligamentos",
+            color="Desligamentos",
+            color_continuous_scale=["#e0f2fe", "#22d3ee", "#f97316"],
+            custom_data=["Desligamentos"],
+        )
+        fig_area.update_traces(
+            texttemplate="<b>%{label}</b><br>%{customdata[0]} desligamentos",
+            hovertemplate=(
+                "\u00c1rea: %{label}<br>"
+                "Desligamentos: %{customdata[0]}<extra></extra>"
+            ),
+            marker=dict(line=dict(width=2, color="#ffffff")),
+            root_color="rgba(0,0,0,0)",
+        )
+        fig_area.update_layout(
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=8, r=8, t=8, b=8),
+            height=360,
+            coloraxis_showscale=False,
+        )
+        st.plotly_chart(fig_area, use_container_width=True)
 
-    por_senioridade = (
-        df.groupby("senioridade", as_index=False).size().sort_values("size", ascending=False)
-    )
-    fig_senioridade = px.bar(
-        por_senioridade,
-        x="senioridade",
-        y="size",
-        labels={"senioridade": "Senioridade", "size": "Desligamentos"},
-        color_discrete_sequence=["#8b5cf6"],
-    )
-    fig_senioridade.update_layout(
-        title="Desligamentos por senioridade",
-        showlegend=False,
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=8, r=8, t=48, b=8),
-    )
-    col2.plotly_chart(fig_senioridade, use_container_width=True)
+    st.divider()
+
+    with st.container(border=True):
+        st.markdown(
+            '<div class="chart-title">Desligamentos por Senioridade</div>',
+            unsafe_allow_html=True,
+        )
+
+        por_senioridade = (
+            df.groupby("senioridade", as_index=False)
+            .size()
+            .rename(columns={"senioridade": "Senioridade", "size": "Desligamentos"})
+            .sort_values("Desligamentos", ascending=False)
+        )
+        ordem_senioridade = por_senioridade["Senioridade"].tolist()
+        fig_senioridade = px.bar(
+            por_senioridade,
+            x="Desligamentos",
+            y="Senioridade",
+            orientation="h",
+            text="Desligamentos",
+            labels={
+                "Senioridade": "Senioridade",
+                "Desligamentos": "Desligamentos",
+            },
+            color_discrete_sequence=["#8b5cf6"],
+        )
+        fig_senioridade.update_traces(
+            textposition="outside",
+            cliponaxis=False,
+            hovertemplate=(
+                "Senioridade: %{y}<br>"
+                "Desligamentos: %{x}<extra></extra>"
+            ),
+        )
+        fig_senioridade.update_layout(
+            showlegend=False,
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=8, r=96, t=8, b=8),
+            xaxis=dict(
+                title="Desligamentos",
+                rangemode="tozero",
+                dtick=1,
+                showgrid=True,
+                gridcolor="#e5e9f2",
+            ),
+            yaxis=dict(
+                title="",
+                categoryorder="array",
+                categoryarray=list(reversed(ordem_senioridade)),
+            ),
+        )
+        st.plotly_chart(fig_senioridade, use_container_width=True)
 
 
 def preparar_tabela(df: pd.DataFrame) -> pd.DataFrame:
