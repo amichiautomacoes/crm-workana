@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from html import escape
 from pathlib import Path
 
 import pandas as pd
@@ -10,7 +11,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 from src.google_sheets import ler_google_sheet
-from src.transformacao import dataframe_para_csv_download, transformar_dataframe
+from src.transformacao import transformar_dataframe
 
 
 load_dotenv()
@@ -24,6 +25,15 @@ FAIXAS_PERMANENCIA = (
     "4 a 5 anos",
     "Mais de 5 anos",
 )
+PAIS_ISO3 = {
+    "Argentina": "ARG",
+    "Brasil": "BRA",
+    "Egito": "EGY",
+    "Espanha": "ESP",
+    "Estados Unidos": "USA",
+    "\u00cdndia": "IND",
+    "M\u00e9xico": "MEX",
+}
 
 
 st.set_page_config(
@@ -751,13 +761,95 @@ def render_graficos(df: pd.DataFrame) -> None:
         st.plotly_chart(fig_senioridade, use_container_width=True)
 
 
-def preparar_tabela(df: pd.DataFrame) -> pd.DataFrame:
-    tabela = df.copy()
-    for coluna in DATE_COLUMNS:
-        tabela[coluna] = tabela[coluna].dt.strftime("%d/%m/%Y")
-    tabela["tempo_permanencia_anos"] = tabela["tempo_permanencia_anos"].round(1)
-    tabela["idade_desligamento"] = tabela["idade_desligamento"].round(1)
-    return tabela
+def render_mapa_colaboradores(df: pd.DataFrame) -> None:
+    with st.container(border=True):
+        st.markdown(
+            '<div class="chart-title">Distribui\u00e7\u00e3o Geogr\u00e1fica dos Colaboradores</div>',
+            unsafe_allow_html=True,
+        )
+
+        mapa = (
+            df.assign(iso3=lambda dados: dados["localizacao"].map(PAIS_ISO3))
+            .dropna(subset=["iso3", "localizacao"])
+            .loc[lambda dados: dados["localizacao"] != ""]
+            .copy()
+        )
+
+        if mapa.empty:
+            st.info("N\u00e3o h\u00e1 pa\u00edses reconhecidos para exibir no mapa.")
+            return
+
+        linhas = []
+        for pais, grupo in mapa.groupby("localizacao", sort=True):
+            colaboradores = (
+                grupo[["nome_completo", "area"]]
+                .sort_values(["area", "nome_completo"])
+                .apply(
+                    lambda linha: (
+                        f"{escape(str(linha['nome_completo']))} "
+                        f"- {escape(str(linha['area']))}"
+                    ),
+                    axis=1,
+                )
+                .tolist()
+            )
+            linhas.append(
+                {
+                    "pais": pais,
+                    "iso3": grupo["iso3"].iloc[0],
+                    "colaboradores": len(grupo),
+                    "detalhes": "<br>".join(colaboradores),
+                }
+            )
+
+        dados_mapa = pd.DataFrame(linhas).sort_values("colaboradores", ascending=False)
+        customdata = dados_mapa[["colaboradores", "detalhes"]].to_numpy()
+
+        fig = go.Figure(
+            data=go.Choropleth(
+                locations=dados_mapa["iso3"],
+                z=dados_mapa["colaboradores"],
+                text=dados_mapa["pais"],
+                customdata=customdata,
+                colorscale=[
+                    [0, "#bae6fd"],
+                    [0.5, "#22d3ee"],
+                    [1, "#f97316"],
+                ],
+                marker_line_color="#ffffff",
+                marker_line_width=0.8,
+                colorbar=dict(
+                    title="Colaboradores",
+                    thickness=14,
+                    len=0.72,
+                ),
+                hovertemplate=(
+                    "<b>%{text}</b><br>"
+                    "Colaboradores: %{customdata[0]}<br><br>"
+                    "%{customdata[1]}<extra></extra>"
+                ),
+            )
+        )
+        fig.update_layout(
+            margin=dict(l=8, r=8, t=8, b=8),
+            height=520,
+            paper_bgcolor="rgba(0,0,0,0)",
+            geo=dict(
+                bgcolor="rgba(0,0,0,0)",
+                projection_type="natural earth",
+                showframe=False,
+                showcoastlines=True,
+                coastlinecolor="rgba(15, 23, 42, .32)",
+                showcountries=True,
+                countrycolor="rgba(15, 23, 42, .24)",
+                showland=True,
+                landcolor="rgba(248, 250, 252, .42)",
+                showocean=True,
+                oceancolor="rgba(14, 165, 233, .12)",
+            ),
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def main() -> None:
@@ -803,63 +895,7 @@ def main() -> None:
     render_graficos(df_filtrado)
     st.divider()
 
-    col1, col2 = st.columns([1, 3])
-    col1.download_button(
-        "Baixar CSV",
-        data=dataframe_para_csv_download(preparar_tabela(df_filtrado)),
-        file_name="rotatividade_colaboradores.csv",
-        mime="text/csv",
-        use_container_width=True,
-    )
-    col2.caption(f"{len(df_filtrado)} registros exibidos apos os filtros aplicados.")
-
-    st.dataframe(
-        preparar_tabela(df_filtrado),
-        use_container_width=True,
-        hide_index=True,
-        column_order=(
-            "nome_completo",
-            "localizacao",
-            "area",
-            "senioridade",
-            "data_contratacao",
-            "ano_contratacao",
-            "data_desligamento",
-            "ano_desligamento",
-            "tempo_permanencia_anos",
-            "idade_desligamento",
-            "salario",
-        ),
-        column_config={
-            "nome_completo": st.column_config.TextColumn("Colaborador", width="large"),
-            "localizacao": st.column_config.TextColumn("Localizacao", width="medium"),
-            "area": st.column_config.TextColumn("Area", width="medium"),
-            "senioridade": st.column_config.TextColumn("Senioridade", width="medium"),
-            "data_contratacao": st.column_config.TextColumn("Contratacao", width="small"),
-            "ano_contratacao": st.column_config.NumberColumn(
-                "Ano contratacao",
-                format="%d",
-                width="small",
-            ),
-            "data_desligamento": st.column_config.TextColumn("Desligamento", width="small"),
-            "ano_desligamento": st.column_config.NumberColumn(
-                "Ano desligamento",
-                format="%d",
-                width="small",
-            ),
-            "tempo_permanencia_anos": st.column_config.NumberColumn(
-                "Permanencia",
-                format="%.1f anos",
-                width="small",
-            ),
-            "idade_desligamento": st.column_config.NumberColumn(
-                "Idade no desligamento",
-                format="%.1f anos",
-                width="small",
-            ),
-            "salario": st.column_config.TextColumn("Salario", width="small"),
-        },
-    )
+    render_mapa_colaboradores(df_filtrado)
 
 
 if __name__ == "__main__":
