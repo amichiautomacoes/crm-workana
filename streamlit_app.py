@@ -43,7 +43,7 @@ def aplicar_estilos() -> None:
         background_css = f"""
         .stApp {{
             background-image:
-                linear-gradient(180deg, rgba(246, 248, 251, .76), rgba(246, 248, 251, .9)),
+                linear-gradient(180deg, rgba(7, 12, 26, .2), rgba(7, 12, 26, .36)),
                 url("data:image/png;base64,{imagem_base64}");
             background-size: cover;
             background-position: center;
@@ -61,7 +61,13 @@ def aplicar_estilos() -> None:
         <style>
         {background_css}
         .stApp {{
-            background-color: #f6f8fb;
+            background-color: #07121f;
+        }}
+        [data-testid="stHeader"] {{
+            background: rgba(7, 12, 26, .08);
+        }}
+        [data-testid="stToolbar"] {{
+            right: 1rem;
         }}
         .block-container {{
             padding-top: 1.1rem;
@@ -154,19 +160,31 @@ def aplicar_estilos() -> None:
             margin: 2px 0 14px;
         }}
         div[data-testid="stVerticalBlockBorderWrapper"] {{
-            background: rgba(255, 255, 255, .92);
-            border: 1px solid rgba(229, 233, 242, .96);
+            background: rgba(255, 255, 255, .84);
+            border: 1px solid rgba(255, 255, 255, .42);
             border-radius: 8px;
-            box-shadow: 0 18px 40px rgba(15, 23, 42, .08);
+            box-shadow: 0 18px 40px rgba(7, 12, 26, .12);
             padding: 18px 20px 16px;
+            backdrop-filter: blur(7px);
         }}
         .stDataFrame {{
             border: 1px solid #e5e9f2;
             border-radius: 8px;
         }}
         [data-testid="stSidebar"] {{
-            background: #ffffff;
-            border-right: 1px solid #e5e9f2;
+            background: rgba(7, 12, 26, .34);
+            border-right: 1px solid rgba(255, 255, 255, .24);
+            backdrop-filter: blur(10px);
+        }}
+        [data-testid="stSidebarContent"] {{
+            background: transparent;
+        }}
+        [data-testid="stSidebar"] h1,
+        [data-testid="stSidebar"] h2,
+        [data-testid="stSidebar"] h3,
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] p {{
+            color: #f8fafc;
         }}
         @media (max-width: 680px) {{
             .hero {{
