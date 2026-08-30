@@ -548,89 +548,94 @@ def render_heatmap_permanencia_media(df: pd.DataFrame) -> None:
 
 
 def render_salario_permanencia(df: pd.DataFrame) -> None:
-    dispersao = df.dropna(subset=["salario_valor", "tempo_permanencia_anos"]).copy()
+    with st.container(border=True):
+        st.markdown(
+            '<div class="chart-title">Rela\u00e7\u00e3o entre Sal\u00e1rio e Perman\u00eancia</div>',
+            unsafe_allow_html=True,
+        )
 
-    if dispersao.empty:
-        st.info("Nao ha dados suficientes para cruzar salario e permanencia.")
-        return
+        dispersao = df.dropna(subset=["salario_valor", "tempo_permanencia_anos"]).copy()
 
-    fig = px.scatter(
-        dispersao,
-        x="salario_valor",
-        y="tempo_permanencia_anos",
-        color="senioridade",
-        hover_name="nome_completo",
-        hover_data={
-            "salario_valor": ":,.2f",
-            "tempo_permanencia_anos": ":.1f",
-            "senioridade": True,
-            "area": True,
-            "localizacao": True,
-        },
-        labels={
-            "salario_valor": "Salario",
-            "tempo_permanencia_anos": "Tempo na empresa",
-            "senioridade": "Senioridade",
-            "area": "Area",
-            "localizacao": "Localizacao",
-        },
-        color_discrete_map={
-            "Pleno": "#06b6d4",
-            "Analista J\u00fanior": "#14b8a6",
-            "S\u00eanior": "#8b5cf6",
-            "Gerente": "#f97316",
-            "C-Level": "#2563eb",
-        },
-    )
-    fig.update_traces(
-        marker=dict(size=12, opacity=0.82, line=dict(width=1.5, color="#ffffff")),
-        hovertemplate=(
-            "<b>%{hovertext}</b><br>"
-            "Salario: R$ %{x:,.2f}<br>"
-            "Tempo na empresa: %{y:.1f} anos<br>"
-            "Senioridade: %{customdata[2]}<br>"
-            "Area: %{customdata[3]}<br>"
-            "Localizacao: %{customdata[4]}<extra></extra>"
-        ),
-    )
+        if dispersao.empty:
+            st.info("Nao ha dados suficientes para cruzar salario e permanencia.")
+            return
 
-    salario_medio = dispersao["salario_valor"].mean()
-    permanencia_media = dispersao["tempo_permanencia_anos"].mean()
-    fig.add_vline(
-        x=salario_medio,
-        line_dash="dash",
-        line_color="#94a3b8",
-        opacity=0.8,
-    )
-    fig.add_hline(
-        y=permanencia_media,
-        line_dash="dash",
-        line_color="#94a3b8",
-        opacity=0.8,
-    )
-    fig.update_layout(
-        title="Salario x permanencia",
-        legend_title_text="Senioridade",
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=8, r=8, t=52, b=8),
-        xaxis=dict(
-            title="Salario",
-            tickprefix="R$ ",
-            separatethousands=True,
-            showgrid=True,
-            gridcolor="#e5e9f2",
-        ),
-        yaxis=dict(
-            title="Tempo na empresa",
-            ticksuffix=" anos",
-            rangemode="tozero",
-            showgrid=True,
-            gridcolor="#e5e9f2",
-        ),
-    )
+        fig = px.scatter(
+            dispersao,
+            x="salario_valor",
+            y="tempo_permanencia_anos",
+            color="senioridade",
+            hover_name="nome_completo",
+            hover_data={
+                "salario_valor": ":,.2f",
+                "tempo_permanencia_anos": ":.1f",
+                "senioridade": True,
+                "area": True,
+                "localizacao": True,
+            },
+            labels={
+                "salario_valor": "Salario",
+                "tempo_permanencia_anos": "Tempo na empresa",
+                "senioridade": "Senioridade",
+                "area": "Area",
+                "localizacao": "Localizacao",
+            },
+            color_discrete_map={
+                "Pleno": "#06b6d4",
+                "Analista J\u00fanior": "#14b8a6",
+                "S\u00eanior": "#8b5cf6",
+                "Gerente": "#f97316",
+                "C-Level": "#2563eb",
+            },
+        )
+        fig.update_traces(
+            marker=dict(size=12, opacity=0.82, line=dict(width=1.5, color="#ffffff")),
+            hovertemplate=(
+                "<b>%{hovertext}</b><br>"
+                "Salario: R$ %{x:,.2f}<br>"
+                "Tempo na empresa: %{y:.1f} anos<br>"
+                "Senioridade: %{customdata[2]}<br>"
+                "Area: %{customdata[3]}<br>"
+                "Localizacao: %{customdata[4]}<extra></extra>"
+            ),
+        )
 
-    st.plotly_chart(fig, use_container_width=True)
+        salario_medio = dispersao["salario_valor"].mean()
+        permanencia_media = dispersao["tempo_permanencia_anos"].mean()
+        fig.add_vline(
+            x=salario_medio,
+            line_dash="dash",
+            line_color="#94a3b8",
+            opacity=0.8,
+        )
+        fig.add_hline(
+            y=permanencia_media,
+            line_dash="dash",
+            line_color="#94a3b8",
+            opacity=0.8,
+        )
+        fig.update_layout(
+            legend_title_text="Senioridade",
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=8, r=8, t=8, b=8),
+            xaxis=dict(
+                title="Salario",
+                tickprefix="R$ ",
+                separatethousands=True,
+                showgrid=True,
+                gridcolor="#e5e9f2",
+            ),
+            yaxis=dict(
+                title="Tempo na empresa",
+                ticksuffix=" anos",
+                rangemode="tozero",
+                showgrid=True,
+                gridcolor="#e5e9f2",
+            ),
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def render_graficos(df: pd.DataFrame) -> None:
