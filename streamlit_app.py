@@ -50,25 +50,31 @@ def carregar_imagem_base64(caminho: Path) -> str:
 
 
 def aplicar_estilos() -> None:
-    banner_css = ""
+    background_css = ""
     if BACKGROUND_PATH.exists():
         imagem_base64 = carregar_imagem_base64(BACKGROUND_PATH)
-        banner_css = f"""
+        background_css = f"""
+        .stApp {{
+            background-image:
+                linear-gradient(180deg, rgba(246, 248, 251, .76), rgba(246, 248, 251, .9)),
+                url("data:image/png;base64,{imagem_base64}");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }}
         .hero {{
             background-image:
                 linear-gradient(90deg, rgba(5, 16, 46, .96), rgba(5, 16, 46, .58)),
                 url("data:image/png;base64,{imagem_base64}");
-            background-size: cover;
-            background-position: center;
         }}
         """
 
     st.markdown(
         f"""
         <style>
-        {banner_css}
+        {background_css}
         .stApp {{
-            background: #f6f8fb;
+            background-color: #f6f8fb;
         }}
         .block-container {{
             padding-top: 1.1rem;
@@ -85,6 +91,8 @@ def aplicar_estilos() -> None:
             flex-direction: column;
             justify-content: center;
             box-shadow: 0 22px 60px rgba(10, 21, 52, .16);
+            background-size: cover;
+            background-position: center;
         }}
         .hero-label {{
             color: #67e8f9;
