@@ -159,6 +159,20 @@ def aplicar_estilos() -> None:
             font-weight: 800;
             margin: 4px 0 10px;
         }}
+        .chart-title {{
+            color: #111827;
+            font-size: 1.08rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin: 2px 0 14px;
+        }}
+        div[data-testid="stVerticalBlockBorderWrapper"] {{
+            background: rgba(255, 255, 255, .92);
+            border: 1px solid rgba(229, 233, 242, .96);
+            border-radius: 8px;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, .08);
+            padding: 18px 20px 16px;
+        }}
         .stDataFrame {{
             border: 1px solid #e5e9f2;
             border-radius: 8px;
@@ -350,39 +364,44 @@ def render_visao_geral(
 
 
 def render_evolucao_desligamentos(df: pd.DataFrame) -> None:
-    evolucao = (
-        df.dropna(subset=["data_desligamento"])
-        .assign(ano=lambda dados: dados["data_desligamento"].dt.year)
-        .groupby("ano", as_index=False)
-        .size()
-        .rename(columns={"ano": "Ano", "size": "Desligamentos"})
-        .sort_values("Ano")
-    )
+    with st.container(border=True):
+        st.markdown(
+            '<div class="chart-title">Evolu\u00e7\u00e3o dos desligamentos</div>',
+            unsafe_allow_html=True,
+        )
 
-    fig = px.line(
-        evolucao,
-        x="Ano",
-        y="Desligamentos",
-        markers=True,
-        labels={"Ano": "Ano", "Desligamentos": "Quantidade de desligamentos"},
-        color_discrete_sequence=["#06b6d4"],
-    )
-    fig.update_traces(
-        line=dict(width=3),
-        marker=dict(size=9, color="#06b6d4", line=dict(width=2, color="#ffffff")),
-        hovertemplate="Ano %{x}<br>Desligamentos: %{y}<extra></extra>",
-    )
-    fig.update_layout(
-        title="Evolucao dos desligamentos",
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=8, r=8, t=52, b=8),
-        xaxis=dict(dtick=1, tickmode="linear", showgrid=False),
-        yaxis=dict(title="Quantidade de desligamentos", rangemode="tozero", dtick=1),
-        hovermode="x unified",
-    )
+        evolucao = (
+            df.dropna(subset=["data_desligamento"])
+            .assign(ano=lambda dados: dados["data_desligamento"].dt.year)
+            .groupby("ano", as_index=False)
+            .size()
+            .rename(columns={"ano": "Ano", "size": "Desligamentos"})
+            .sort_values("Ano")
+        )
 
-    st.plotly_chart(fig, use_container_width=True)
+        fig = px.line(
+            evolucao,
+            x="Ano",
+            y="Desligamentos",
+            markers=True,
+            labels={"Ano": "Ano", "Desligamentos": "Quantidade de desligamentos"},
+            color_discrete_sequence=["#06b6d4"],
+        )
+        fig.update_traces(
+            line=dict(width=3),
+            marker=dict(size=9, color="#06b6d4", line=dict(width=2, color="#ffffff")),
+            hovertemplate="Ano %{x}<br>Desligamentos: %{y}<extra></extra>",
+        )
+        fig.update_layout(
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=8, r=8, t=8, b=8),
+            xaxis=dict(dtick=1, tickmode="linear", showgrid=False),
+            yaxis=dict(title="Quantidade de desligamentos", rangemode="tozero", dtick=1),
+            hovermode="x unified",
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def render_tempo_permanencia(df: pd.DataFrame) -> None:
