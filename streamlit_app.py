@@ -119,12 +119,15 @@ def aplicar_estilos() -> None:
             font-size: 1.02rem;
         }}
         .metric-card {{
-            background: #ffffff;
-            border: 1px solid #e5e9f2;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid rgba(226, 232, 240, .92);
             border-radius: 8px;
-            padding: 18px 18px 16px;
-            min-height: 136px;
-            box-shadow: 0 14px 30px rgba(15, 23, 42, .06);
+            box-shadow: 0 16px 36px rgba(15, 23, 42, .12);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            height: 180px;
+            padding: 22px 26px 20px;
             position: relative;
             overflow: hidden;
         }}
@@ -138,23 +141,24 @@ def aplicar_estilos() -> None:
             background: var(--accent);
         }}
         .metric-label {{
-            color: #667085;
-            font-size: .82rem;
-            font-weight: 700;
-            line-height: 1.25;
-            min-height: 34px;
+            color: #5f6b82;
+            font-size: .86rem;
+            font-weight: 800;
+            line-height: 1.28;
+            min-height: 42px;
         }}
         .metric-value {{
-            color: #111827;
-            font-size: 2rem;
+            color: #0f172a;
+            font-size: 2.05rem;
             font-weight: 800;
-            line-height: 1.05;
-            margin-top: 10px;
+            line-height: 1;
+            margin-top: 14px;
         }}
         .metric-note {{
-            color: #7a8599;
-            font-size: .78rem;
-            margin-top: 8px;
+            color: #728095;
+            font-size: .8rem;
+            line-height: 1.35;
+            margin-top: auto;
         }}
         .section-title {{
             color: #ffffff;
@@ -279,17 +283,35 @@ def aplicar_filtros(df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
 
     with st.sidebar:
         st.header("Filtros interativos")
-        localizacoes = st.multiselect("Pais", opcoes_coluna(df, "localizacao"))
-        areas = st.multiselect("Area", opcoes_coluna(df, "area"))
-        senioridades = st.multiselect("Senioridade", opcoes_coluna(df, "senioridade"))
-        generos = st.multiselect("Genero", opcoes_coluna(df, "genero"))
+        localizacoes = st.multiselect(
+            "País",
+            opcoes_coluna(df, "localizacao"),
+            placeholder="Selecione as opções",
+        )
+        areas = st.multiselect(
+            "Área",
+            opcoes_coluna(df, "area"),
+            placeholder="Selecione as opções",
+        )
+        senioridades = st.multiselect(
+            "Senioridade",
+            opcoes_coluna(df, "senioridade"),
+            placeholder="Selecione as opções",
+        )
+        generos = st.multiselect(
+            "Gênero",
+            opcoes_coluna(df, "genero"),
+            placeholder="Selecione as opções",
+        )
         anos_contratacao = st.multiselect(
-            "Ano de contratacao",
+            "Ano de contratação",
             anos_contratacao_disponiveis,
+            placeholder="Selecione as opções",
         )
         anos_desligamento = st.multiselect(
             "Ano de desligamento",
             anos_desligamento_disponiveis,
+            placeholder="Selecione as opções",
         )
 
     filtrado = df.copy()
@@ -357,7 +379,7 @@ def render_visao_geral(
         )
     with col2:
         render_metric_card(
-            "Tempo medio de permanencia",
+            "Média de permanência",
             formatar_anos(tempo_medio),
             "Da contratacao ao desligamento",
             "#14b8a6",
