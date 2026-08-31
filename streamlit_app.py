@@ -126,8 +126,8 @@ def aplicar_estilos() -> None:
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            height: 180px;
-            padding: 22px 26px 20px;
+            height: 156px;
+            padding: 22px 24px 20px;
             position: relative;
             overflow: hidden;
         }}
@@ -145,20 +145,19 @@ def aplicar_estilos() -> None:
             font-size: .86rem;
             font-weight: 800;
             line-height: 1.28;
-            min-height: 42px;
+            min-height: 64px;
         }}
         .metric-value {{
             color: #0f172a;
-            font-size: 2.05rem;
+            font-size: 1.95rem;
             font-weight: 800;
             line-height: 1;
-            margin-top: 14px;
+            letter-spacing: 0;
+            margin-top: 10px;
+            white-space: nowrap;
         }}
-        .metric-note {{
-            color: #728095;
-            font-size: .8rem;
-            line-height: 1.35;
-            margin-top: auto;
+        .metrics-spacer {{
+            height: 28px;
         }}
         .section-title {{
             color: #ffffff;
@@ -266,18 +265,7 @@ def opcoes_ano(df: pd.DataFrame, coluna: str) -> list[int]:
     return sorted(int(valor) for valor in df[coluna].dropna().unique().tolist())
 
 
-def descrever_filtro_anos(anos_selecionados: list[int], anos_disponiveis: list[int]) -> str:
-    anos = anos_selecionados or anos_disponiveis
-    if not anos:
-        return "Sem periodo"
-
-    if len(anos) == 1:
-        return str(anos[0])
-
-    return f"{min(anos)} a {max(anos)}"
-
-
-def aplicar_filtros(df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
+def aplicar_filtros(df: pd.DataFrame) -> pd.DataFrame:
     anos_contratacao_disponiveis = opcoes_ano(df, "ano_contratacao")
     anos_desligamento_disponiveis = opcoes_ano(df, "ano_desligamento")
 
@@ -328,11 +316,7 @@ def aplicar_filtros(df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
     if anos_desligamento:
         filtrado = filtrado[filtrado["ano_desligamento"].isin(anos_desligamento)]
 
-    periodo_desligamento = descrever_filtro_anos(
-        anos_desligamento,
-        anos_desligamento_disponiveis,
-    )
-    return filtrado, periodo_desligamento
+    return filtrado
 
 
 def formatar_numero(valor: int) -> str:
@@ -345,23 +329,19 @@ def formatar_anos(valor: float) -> str:
     return f"{valor:.1f} anos".replace(".", ",")
 
 
-def render_metric_card(label: str, value: str, note: str, accent: str) -> None:
+def render_metric_card(label: str, value: str, accent: str) -> None:
     st.markdown(
         f"""
         <div class="metric-card" style="--accent: {accent};">
             <div class="metric-label">{label}</div>
             <div class="metric-value">{value}</div>
-            <div class="metric-note">{note}</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
 
-def render_visao_geral(
-    df: pd.DataFrame,
-    periodo_desligamento: str,
-) -> None:
+def render_visao_geral(df: pd.DataFrame) -> None:
     total_colaboradores = len(df)
     tempo_medio = df["tempo_permanencia_anos"].dropna().mean()
     idade_media = df["idade_desligamento"].dropna().mean()
@@ -374,30 +354,27 @@ def render_visao_geral(
         render_metric_card(
             "Total de colaboradores analisados",
             formatar_numero(total_colaboradores),
-            "Base apos filtros aplicados",
             "#06b6d4",
         )
     with col2:
         render_metric_card(
             "Média de permanência",
             formatar_anos(tempo_medio),
-            "Da contratacao ao desligamento",
             "#14b8a6",
         )
     with col3:
         render_metric_card(
             "Idade media no desligamento",
             formatar_anos(idade_media),
-            "Valor aproximado por datas",
             "#8b5cf6",
         )
     with col4:
         render_metric_card(
             "Desligamentos no periodo",
             formatar_numero(int(desligamentos)),
-            periodo_desligamento,
             "#f97316",
         )
+    st.markdown('<div class="metrics-spacer" aria-hidden="true"></div>', unsafe_allow_html=True)
 
 
 def render_evolucao_desligamentos(df: pd.DataFrame) -> None:
@@ -894,9 +871,9 @@ def main() -> None:
         st.error(f"Nao foi possivel carregar a planilha: {exc}")
         st.stop()
 
-    df_filtrado, periodo_desligamento = aplicar_filtros(df)
+    df_filtrado = aplicar_filtros(df)
 
-    render_visao_geral(df_filtrado, periodo_desligamento)
+    render_visao_geral(df_filtrado)
 
     if df_filtrado.empty:
         st.info("Nenhum desligamento encontrado para os filtros selecionados.")
