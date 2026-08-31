@@ -860,7 +860,7 @@ def main() -> None:
         <section class="hero">
             <div class="hero-label">People Analytics</div>
             <h1>Painel de Rotatividade de Colaboradores</h1>
-            <p>Analise de desligamentos, permanencia e perfil dos colaboradores a partir da base oficial no Google Sheets.</p>
+            <p>Análise de desligamentos e período de permanência dos colaboradores</p>
         </section>
         """,
         unsafe_allow_html=True,
