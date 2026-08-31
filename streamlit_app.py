@@ -157,13 +157,13 @@ def aplicar_estilos() -> None:
             margin-top: 8px;
         }}
         .section-title {{
-            color: #111827;
+            color: #ffffff;
             font-size: 1.05rem;
             font-weight: 800;
             margin: 4px 0 10px;
         }}
         .chart-title {{
-            color: #111827;
+            color: #ffffff;
             font-size: 1.08rem;
             font-weight: 800;
             line-height: 1.2;
