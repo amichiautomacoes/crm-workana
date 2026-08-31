@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import base64
-from html import escape
 from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -20,20 +18,38 @@ APP_TITLE = "Painel de Rotatividade de Colaboradores"
 BACKGROUND_PATH = Path("assets/backgraoundworkana.png")
 DATE_COLUMNS = ("data_nascimento", "data_contratacao", "data_desligamento")
 FAIXAS_PERMANENCIA = (
-    "Ate 3 anos",
+    "Até 3 anos",
     "3 a 4 anos",
     "4 a 5 anos",
-    "Mais de 5 anos",
+    "Acima de 5 anos",
 )
+FAIXAS_IDADE = (
+    "Até 25 anos",
+    "26 a 35 anos",
+    "36 a 45 anos",
+    "Acima de 45 anos",
+)
+FILTROS_PERMANENCIA = {
+    "País": "localizacao",
+    "Área": "area",
+    "Senioridade": "senioridade",
+    "Gênero": "genero",
+    "Idade": "idade_faixa",
+    "Salário": "salario_faixa",
+}
 PAIS_ISO3 = {
     "Argentina": "ARG",
     "Brasil": "BRA",
     "Egito": "EGY",
     "Espanha": "ESP",
     "Estados Unidos": "USA",
-    "\u00cdndia": "IND",
-    "M\u00e9xico": "MEX",
+    "Índia": "IND",
+    "México": "MEX",
 }
+PAGES = (
+    "Tempo de permanência",
+    "Desligamentos",
+)
 
 
 st.set_page_config(
@@ -53,16 +69,11 @@ def aplicar_estilos() -> None:
         background_css = f"""
         .stApp {{
             background-image:
-                linear-gradient(180deg, rgba(7, 12, 26, .2), rgba(7, 12, 26, .36)),
+                linear-gradient(180deg, rgba(6, 12, 24, .58), rgba(6, 12, 24, .72)),
                 url("data:image/png;base64,{imagem_base64}");
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
-        }}
-        .hero {{
-            background-image:
-                linear-gradient(90deg, rgba(5, 16, 46, .96), rgba(5, 16, 46, .58)),
-                url("data:image/png;base64,{imagem_base64}");
         }}
         """
 
@@ -71,141 +82,201 @@ def aplicar_estilos() -> None:
         <style>
         {background_css}
         .stApp {{
-            background-color: #07121f;
+            background-color: #06101d;
         }}
         [data-testid="stHeader"] {{
-            background: rgba(7, 12, 26, .08);
-        }}
-        [data-testid="stToolbar"] {{
-            right: 1rem;
+            background: rgba(6, 12, 24, .08);
         }}
         .block-container {{
-            padding-top: 1.1rem;
-            padding-bottom: 2.2rem;
-            max-width: 1360px;
+            max-width: 1260px;
+            padding-top: 1.4rem;
+            padding-bottom: 2.5rem;
         }}
-        .hero {{
-            min-height: 220px;
+        [data-testid="stSidebar"] {{
+            background: rgba(6, 12, 24, .72);
+            border-right: 1px solid rgba(255, 255, 255, .18);
+        }}
+        [data-testid="stSidebar"] * {{
+            color: #f8fafc;
+        }}
+        .page-intro {{
+            background:
+                linear-gradient(135deg, rgba(255, 255, 255, .94), rgba(241, 245, 249, .88));
+            border: 1px solid rgba(255, 255, 255, .7);
             border-radius: 8px;
-            padding: 38px 42px;
-            color: white;
-            margin-bottom: 22px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            box-shadow: 0 22px 60px rgba(10, 21, 52, .16);
-            background-size: cover;
-            background-position: center;
+            box-shadow: 0 20px 54px rgba(0, 0, 0, .24);
+            padding: 30px 34px;
+            margin-bottom: 24px;
         }}
-        .hero-label {{
-            color: #67e8f9;
-            font-size: .78rem;
-            font-weight: 800;
-            letter-spacing: .08em;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-        }}
-        .hero h1 {{
-            font-size: 2.65rem;
-            line-height: 1.05;
+        .page-intro h1 {{
+            color: #0f172a;
+            font-size: 2.1rem;
+            line-height: 1.1;
             margin: 0 0 10px;
             letter-spacing: 0;
-            max-width: 760px;
         }}
-        .hero p {{
-            max-width: 720px;
+        .page-intro p {{
+            color: #334155;
+            font-size: 1.05rem;
+            line-height: 1.45;
             margin: 0;
-            color: rgba(255,255,255,.84);
-            font-size: 1.02rem;
+        }}
+        .page-intro strong {{
+            color: #0f766e;
+            font-weight: 800;
+        }}
+        .metric-grid {{
+            display: grid;
+            gap: 16px;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            margin-bottom: 24px;
         }}
         .metric-card {{
-            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-            border: 1px solid rgba(226, 232, 240, .92);
+            background: rgba(255, 255, 255, .94);
+            border: 1px solid rgba(226, 232, 240, .86);
             border-radius: 8px;
-            box-shadow: 0 16px 36px rgba(15, 23, 42, .12);
+            box-shadow: 0 16px 42px rgba(0, 0, 0, .2);
             box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            height: 156px;
-            padding: 22px 24px 20px;
+            min-height: 132px;
+            padding: 22px 24px;
             position: relative;
             overflow: hidden;
         }}
         .metric-card::before {{
             content: "";
             position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 4px;
+            inset: 0 auto 0 0;
+            width: 5px;
             background: var(--accent);
         }}
         .metric-label {{
-            color: #5f6b82;
+            color: #475569;
             font-size: .86rem;
             font-weight: 800;
-            line-height: 1.28;
-            min-height: 64px;
+            line-height: 1.25;
+            margin-bottom: 18px;
+            text-transform: uppercase;
         }}
         .metric-value {{
             color: #0f172a;
-            font-size: 1.95rem;
-            font-weight: 800;
-            line-height: 1;
+            font-size: 2rem;
+            font-weight: 850;
             letter-spacing: 0;
-            margin-top: 10px;
+            line-height: 1;
             white-space: nowrap;
         }}
-        .metrics-spacer {{
-            height: 28px;
+        .metric-value-small {{
+            font-size: 1.55rem;
         }}
-        .section-title {{
-            color: #ffffff;
-            font-size: 1.05rem;
-            font-weight: 800;
-            margin: 4px 0 10px;
+        .metric-detail {{
+            color: #64748b;
+            font-size: .84rem;
+            font-weight: 700;
+            line-height: 1.25;
+            margin-top: 12px;
         }}
-        .chart-title {{
-            color: #ffffff;
-            font-size: 1.08rem;
-            font-weight: 800;
-            line-height: 1.2;
-            margin: 2px 0 14px;
+        .chart-section-title {{
+            color: #0f172a;
+            font-size: 1.48rem;
+            font-weight: 850;
+            line-height: 1.18;
+            letter-spacing: 0;
+            margin: 2px 0 20px;
+            padding-left: 14px;
+            position: relative;
+        }}
+        .chart-section-title::before {{
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 2px;
+            bottom: 2px;
+            width: 5px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, #0ea5e9, #14b8a6);
         }}
         div[data-testid="stVerticalBlockBorderWrapper"] {{
-            background: rgba(255, 255, 255, .84);
-            border: 1px solid rgba(255, 255, 255, .42);
+            background:
+                linear-gradient(145deg, rgba(255, 255, 255, .98), rgba(232, 240, 248, .92));
+            border: 1px solid rgba(255, 255, 255, .88);
             border-radius: 8px;
-            box-shadow: 0 18px 40px rgba(7, 12, 26, .12);
-            padding: 18px 20px 16px;
-            backdrop-filter: blur(7px);
+            box-shadow:
+                0 28px 70px rgba(0, 0, 0, .34),
+                0 10px 22px rgba(15, 23, 42, .16),
+                inset 0 1px 0 rgba(255, 255, 255, .92);
+            overflow: hidden;
+            padding: 24px 26px 18px;
+            position: relative;
         }}
-        .stDataFrame {{
-            border: 1px solid #e5e9f2;
-            border-radius: 8px;
+        div[data-testid="stVerticalBlockBorderWrapper"]::before {{
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 18% 0%, rgba(14, 165, 233, .18), transparent 34%),
+                radial-gradient(circle at 88% 16%, rgba(20, 184, 166, .14), transparent 30%);
+            pointer-events: none;
         }}
-        [data-testid="stSidebar"] {{
-            background: rgba(7, 12, 26, .34);
-            border-right: 1px solid rgba(255, 255, 255, .24);
-            backdrop-filter: blur(10px);
+        div[data-testid="stVerticalBlockBorderWrapper"] > div {{
+            position: relative;
+            z-index: 1;
         }}
-        [data-testid="stSidebarContent"] {{
-            background: transparent;
+        div[data-testid="stVerticalBlockBorderWrapper"] label {{
+            color: #334155;
+            font-weight: 750;
         }}
-        [data-testid="stSidebar"] h1,
-        [data-testid="stSidebar"] h2,
-        [data-testid="stSidebar"] h3,
-        [data-testid="stSidebar"] label,
-        [data-testid="stSidebar"] p {{
+        .scatter-panel-marker {{
+            display: none;
+        }}
+        .dark-panel-marker {{
+            display: none;
+        }}
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.scatter-panel-marker),
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.dark-panel-marker) {{
+            background:
+                radial-gradient(circle at 84% 10%, rgba(99, 102, 241, .22), transparent 28%),
+                radial-gradient(circle at 92% 86%, rgba(20, 184, 166, .18), transparent 34%),
+                linear-gradient(145deg, rgba(7, 19, 54, .98), rgba(3, 10, 31, .96));
+            border: 1px solid rgba(148, 163, 184, .44);
+            box-shadow:
+                0 34px 90px rgba(0, 0, 0, .42),
+                0 12px 28px rgba(15, 23, 42, .28),
+                inset 0 1px 0 rgba(255, 255, 255, .18);
+        }}
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.scatter-panel-marker)::before,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.dark-panel-marker)::before {{
+            background:
+                linear-gradient(135deg, rgba(255, 255, 255, .08), transparent 42%),
+                radial-gradient(circle at 24% 72%, rgba(14, 165, 233, .1), transparent 30%);
+        }}
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.scatter-panel-marker) label,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.dark-panel-marker) label {{
+            color: #e2e8f0;
+        }}
+        .chart-section-title-dark {{
             color: #f8fafc;
         }}
+        .chart-section-title-dark::before {{
+            background: linear-gradient(180deg, #38bdf8, #a78bfa);
+        }}
+        .styled-table {{
+            border-radius: 8px;
+            overflow: hidden;
+        }}
         @media (max-width: 680px) {{
-            .hero {{
-                padding: 28px 24px;
-                min-height: 210px;
+            .page-intro {{
+                padding: 24px 22px;
             }}
-            .hero h1 {{
-                font-size: 2rem;
+            .page-intro h1 {{
+                font-size: 1.72rem;
+            }}
+            .metric-grid {{
+                grid-template-columns: 1fr;
+            }}
+        }}
+        @media (min-width: 681px) and (max-width: 1080px) {{
+            .metric-grid {{
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }}
         }}
         </style>
@@ -238,6 +309,10 @@ def calcular_anos(inicio: pd.Series, fim: pd.Series) -> pd.Series:
 
 def enriquecer_rotatividade(df: pd.DataFrame) -> pd.DataFrame:
     dados = converter_datas(df)
+    dados["idade_valor"] = pd.to_numeric(
+        dados["idade"].astype(str).str.replace(",", ".", regex=False),
+        errors="coerce",
+    )
     dados["tempo_permanencia_anos"] = calcular_anos(
         dados["data_contratacao"],
         dados["data_desligamento"],
@@ -252,261 +327,239 @@ def enriquecer_rotatividade(df: pd.DataFrame) -> pd.DataFrame:
         labels=FAIXAS_PERMANENCIA,
         right=True,
     )
+    dados["idade_faixa"] = pd.cut(
+        dados["idade_valor"],
+        bins=[float("-inf"), 25, 35, 45, float("inf")],
+        labels=FAIXAS_IDADE,
+        right=True,
+    )
+    dados["salario_faixa"] = pd.cut(
+        dados["salario_valor"],
+        bins=[float("-inf"), 2000, 4000, 6000, float("inf")],
+        labels=("Até R$ 2.000", "R$ 2.001 a R$ 4.000", "R$ 4.001 a R$ 6.000", "Acima de R$ 6.000"),
+        right=True,
+    )
     dados["ano_contratacao"] = dados["data_contratacao"].dt.year.astype("Int64")
     dados["ano_desligamento"] = dados["data_desligamento"].dt.year.astype("Int64")
     return dados
 
 
-def opcoes_coluna(df: pd.DataFrame, coluna: str) -> list[str]:
-    return sorted(valor for valor in df[coluna].dropna().unique().tolist() if valor)
-
-
-def opcoes_ano(df: pd.DataFrame, coluna: str) -> list[int]:
-    return sorted(int(valor) for valor in df[coluna].dropna().unique().tolist())
-
-
-def aplicar_filtros(df: pd.DataFrame) -> pd.DataFrame:
-    anos_contratacao_disponiveis = opcoes_ano(df, "ano_contratacao")
-    anos_desligamento_disponiveis = opcoes_ano(df, "ano_desligamento")
-
+def render_sidebar() -> str:
     with st.sidebar:
-        st.header("Filtros interativos")
-        localizacoes = st.multiselect(
-            "País",
-            opcoes_coluna(df, "localizacao"),
-            placeholder="Selecione as opções",
-        )
-        areas = st.multiselect(
-            "Área",
-            opcoes_coluna(df, "area"),
-            placeholder="Selecione as opções",
-        )
-        senioridades = st.multiselect(
-            "Senioridade",
-            opcoes_coluna(df, "senioridade"),
-            placeholder="Selecione as opções",
-        )
-        generos = st.multiselect(
-            "Gênero",
-            opcoes_coluna(df, "genero"),
-            placeholder="Selecione as opções",
-        )
-        anos_contratacao = st.multiselect(
-            "Ano de contratação",
-            anos_contratacao_disponiveis,
-            placeholder="Selecione as opções",
-        )
-        anos_desligamento = st.multiselect(
-            "Ano de desligamento",
-            anos_desligamento_disponiveis,
-            placeholder="Selecione as opções",
+        st.title("Navegação")
+        return st.radio(
+            "Página",
+            PAGES,
+            label_visibility="collapsed",
         )
 
-    filtrado = df.copy()
-    if localizacoes:
-        filtrado = filtrado[filtrado["localizacao"].isin(localizacoes)]
-    if areas:
-        filtrado = filtrado[filtrado["area"].isin(areas)]
-    if senioridades:
-        filtrado = filtrado[filtrado["senioridade"].isin(senioridades)]
-    if generos:
-        filtrado = filtrado[filtrado["genero"].isin(generos)]
-    if anos_contratacao:
-        filtrado = filtrado[filtrado["ano_contratacao"].isin(anos_contratacao)]
-    if anos_desligamento:
-        filtrado = filtrado[filtrado["ano_desligamento"].isin(anos_desligamento)]
 
-    return filtrado
+def render_page_intro(titulo: str, subtitulo: str) -> None:
+    st.markdown(
+        f"""
+        <section class="page-intro">
+            <h1>{titulo}</h1>
+            <p>{subtitulo}</p>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def formatar_anos(valor: float | None) -> str:
+    if valor is None or pd.isna(valor):
+        return "Sem dados"
+    return f"{valor:.1f} anos".replace(".", ",")
+
+
+def render_metric_card(
+    label: str,
+    value: str,
+    accent: str,
+    detail: str = "",
+    value_class: str = "",
+) -> str:
+    detalhe = f'<div class="metric-detail">{detail}</div>' if detail else ""
+    classes_valor = f"metric-value {value_class}".strip()
+    return f"""
+    <article class="metric-card" style="--accent: {accent};">
+        <div class="metric-label">{label}</div>
+        <div class="{classes_valor}">{value}</div>
+        {detalhe}
+    </article>
+    """
+
+
+def render_permanencia_cards(df: pd.DataFrame) -> None:
+    permanencia = df["tempo_permanencia_anos"].dropna()
+    media = permanencia.mean() if not permanencia.empty else None
+    mediana = permanencia.median() if not permanencia.empty else None
+    maior = permanencia.max() if not permanencia.empty else None
+    menor = permanencia.min() if not permanencia.empty else None
+
+    st.markdown(
+        f"""
+        <section class="metric-grid">
+            {render_metric_card("Média de permanência", formatar_anos(media), "#0ea5e9")}
+            {render_metric_card("Mediana de permanência", formatar_anos(mediana), "#14b8a6")}
+            {render_metric_card("Maior permanência", formatar_anos(maior), "#6366f1")}
+            {render_metric_card("Menor permanência", formatar_anos(menor), "#f97316")}
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def formatar_numero(valor: int) -> str:
     return f"{valor:,}".replace(",", ".")
 
 
-def formatar_anos(valor: float) -> str:
-    if pd.isna(valor):
+def formatar_decimal(valor: float | None) -> str:
+    if valor is None or pd.isna(valor):
         return "Sem dados"
-    return f"{valor:.1f} anos".replace(".", ",")
+    return f"{valor:.1f}".replace(".", ",")
 
 
-def render_metric_card(label: str, value: str, accent: str) -> None:
+def opcoes_coluna(df: pd.DataFrame, coluna: str) -> list[str]:
+    valores = df[coluna].dropna().astype(str)
+    return sorted(valor for valor in valores.unique().tolist() if valor)
+
+
+def aplicar_filtro_permanencia(df: pd.DataFrame, coluna: str, valores: list[str]) -> pd.DataFrame:
+    if not valores:
+        return df
+
+    serie = df[coluna].astype(str)
+    return df[serie.isin(valores)]
+
+
+def render_titulo_grafico_permanencia() -> None:
     st.markdown(
-        f"""
-        <div class="metric-card" style="--accent: {accent};">
-            <div class="metric-label">{label}</div>
-            <div class="metric-value">{value}</div>
-        </div>
-        """,
+        '<h2 class="chart-section-title">Perfil de Retenção e Ciclo de Vida dos Colaboradores</h2>',
         unsafe_allow_html=True,
     )
 
 
-def render_visao_geral(df: pd.DataFrame) -> None:
-    total_colaboradores = len(df)
-    tempo_medio = df["tempo_permanencia_anos"].dropna().mean()
-    idade_media = df["idade_desligamento"].dropna().mean()
-    desligamentos = df["data_desligamento"].notna().sum()
-
-    st.markdown('<div class="section-title">Visao geral</div>', unsafe_allow_html=True)
-
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        render_metric_card(
-            "Total de colaboradores analisados",
-            formatar_numero(total_colaboradores),
-            "#06b6d4",
-        )
-    with col2:
-        render_metric_card(
-            "Média de permanência",
-            formatar_anos(tempo_medio),
-            "#14b8a6",
-        )
-    with col3:
-        render_metric_card(
-            "Idade media no desligamento",
-            formatar_anos(idade_media),
-            "#8b5cf6",
-        )
-    with col4:
-        render_metric_card(
-            "Desligamentos no periodo",
-            formatar_numero(int(desligamentos)),
-            "#f97316",
-        )
-    st.markdown('<div class="metrics-spacer" aria-hidden="true"></div>', unsafe_allow_html=True)
-
-
-def render_evolucao_desligamentos(df: pd.DataFrame) -> None:
+def render_grafico_perfil_retencao(df: pd.DataFrame) -> None:
     with st.container(border=True):
-        st.markdown(
-            '<div class="chart-title">Evolu\u00e7\u00e3o dos desligamentos</div>',
-            unsafe_allow_html=True,
-        )
+        render_titulo_grafico_permanencia()
 
-        evolucao = (
-            df.dropna(subset=["data_desligamento"])
-            .assign(ano=lambda dados: dados["data_desligamento"].dt.year)
-            .groupby("ano", as_index=False)
-            .size()
-            .rename(columns={"ano": "Ano", "size": "Desligamentos"})
-            .sort_values("Ano")
-        )
+        controle_col, vazio_col = st.columns([1.25, 3.75])
+        with controle_col:
+            criterio = st.selectbox(
+                "Filtrar por",
+                list(FILTROS_PERMANENCIA.keys()),
+                key="permanencia_filtro_criterio",
+            )
 
-        fig = px.line(
-            evolucao,
-            x="Ano",
-            y="Desligamentos",
-            markers=True,
-            labels={"Ano": "Ano", "Desligamentos": "Quantidade de desligamentos"},
-            color_discrete_sequence=["#06b6d4"],
-        )
-        fig.update_traces(
-            line=dict(width=3),
-            marker=dict(size=9, color="#06b6d4", line=dict(width=2, color="#ffffff")),
-            hovertemplate="Ano %{x}<br>Desligamentos: %{y}<extra></extra>",
-        )
-        fig.update_layout(
-            plot_bgcolor="rgba(0,0,0,0)",
-            paper_bgcolor="rgba(0,0,0,0)",
-            margin=dict(l=8, r=8, t=8, b=8),
-            xaxis=dict(dtick=1, tickmode="linear", showgrid=False),
-            yaxis=dict(title="Quantidade de desligamentos", rangemode="tozero", dtick=1),
-            hovermode="x unified",
-        )
+            coluna_filtro = FILTROS_PERMANENCIA[criterio]
+            valores_filtro = st.multiselect(
+                criterio,
+                opcoes_coluna(df, coluna_filtro),
+                key=f"permanencia_filtro_{coluna_filtro}",
+                placeholder="Todos",
+            )
 
-        st.plotly_chart(fig, use_container_width=True)
+        with vazio_col:
+            st.empty()
 
-
-def render_tempo_permanencia(df: pd.DataFrame) -> None:
-    with st.container(border=True):
-        st.markdown(
-            '<div class="chart-title">Tempo de Perman\u00eancia na Empresa</div>',
-            unsafe_allow_html=True,
-        )
-
+        df_filtrado = aplicar_filtro_permanencia(df, coluna_filtro, valores_filtro)
         distribuicao = (
-            df["faixa_permanencia"]
+            df_filtrado["faixa_permanencia"]
             .value_counts()
             .reindex(FAIXAS_PERMANENCIA, fill_value=0)
-            .rename_axis("Faixa")
-            .reset_index(name="Colaboradores")
+            .rename_axis("Faixa de permanência")
+            .reset_index(name="Número de colaboradores")
         )
-        total = int(distribuicao["Colaboradores"].sum())
-        distribuicao["Percentual"] = (
-            distribuicao["Colaboradores"].div(total).mul(100).round(1) if total else 0
+        total = int(distribuicao["Número de colaboradores"].sum())
+        distribuicao["Porcentagem"] = (
+            distribuicao["Número de colaboradores"].div(total).mul(100).round(1)
+            if total
+            else 0
         )
-        distribuicao["Rotulo"] = distribuicao.apply(
-            lambda linha: (
-                f"{int(linha['Colaboradores'])} colaboradores "
-                f"({linha['Percentual']:.1f}%)".replace(".", ",")
-            ),
-            axis=1,
+        distribuicao["Legenda"] = distribuicao["Porcentagem"].map(
+            lambda valor: f"{valor:.1f}%".replace(".", ",")
         )
 
         fig = px.bar(
             distribuicao,
-            x="Colaboradores",
-            y="Faixa",
+            x="Número de colaboradores",
+            y="Faixa de permanência",
             orientation="h",
-            text="Rotulo",
-            color="Faixa",
+            text="Legenda",
+            custom_data=["Porcentagem"],
+            color="Faixa de permanência",
             color_discrete_map={
-                "Ate 3 anos": "#06b6d4",
+                "Até 3 anos": "#0ea5e9",
                 "3 a 4 anos": "#14b8a6",
-                "4 a 5 anos": "#8b5cf6",
-                "Mais de 5 anos": "#f97316",
+                "4 a 5 anos": "#6366f1",
+                "Acima de 5 anos": "#f97316",
             },
-            category_orders={"Faixa": list(FAIXAS_PERMANENCIA)},
-            custom_data=["Percentual"],
+            category_orders={"Faixa de permanência": list(FAIXAS_PERMANENCIA)},
+            labels={
+                "Número de colaboradores": "Número de colaboradores",
+                "Faixa de permanência": "Anos",
+            },
         )
         fig.update_traces(
             textposition="outside",
             cliponaxis=False,
             hovertemplate=(
-                "%{y}<br>"
-                "Colaboradores: %{x}<br>"
-                "Participacao: %{customdata[0]:.1f}%<extra></extra>"
+                "Anos: %{y}<br>"
+                "Número de colaboradores: %{x}<br>"
+                "Porcentagem: %{customdata[0]:.1f}%<extra></extra>"
             ),
         )
         fig.update_layout(
-            showlegend=False,
+            showlegend=True,
+            legend_title_text="Porcentagem",
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
-            margin=dict(l=8, r=128, t=8, b=8),
+            margin=dict(l=8, r=96, t=14, b=8),
+            height=390,
             xaxis=dict(
-                title="Quantidade de colaboradores",
+                title="Número de colaboradores",
                 rangemode="tozero",
                 dtick=1,
                 showgrid=True,
-                gridcolor="#e5e9f2",
+                gridcolor="#e2e8f0",
             ),
-            yaxis=dict(title="", autorange="reversed"),
+            yaxis=dict(
+                title="Anos",
+                autorange="reversed",
+            ),
+            font=dict(color="#0f172a"),
         )
 
         st.plotly_chart(fig, use_container_width=True)
 
 
-def render_heatmap_permanencia_media(df: pd.DataFrame) -> None:
-    with st.container(border=True):
-        st.markdown(
-            '<div class="chart-title">Tempo M\u00e9dio de Perman\u00eancia</div>',
-            unsafe_allow_html=True,
-        )
+def render_titulo_treemap_permanencia() -> None:
+    st.markdown(
+        '<h2 class="chart-section-title">Tempo Médio de Permanência</h2>',
+        unsafe_allow_html=True,
+    )
 
-        chart_col, selector_col = st.columns([4, 1])
-        with selector_col:
+
+def render_treemap_permanencia_media(df: pd.DataFrame) -> None:
+    with st.container(border=True):
+        render_titulo_treemap_permanencia()
+
+        controle_col, vazio_col = st.columns([1.25, 3.75])
+        with controle_col:
             dimensao = st.selectbox(
                 "Visualizar por",
-                ("\u00c1rea", "Cargo"),
-                key="heatmap_permanencia_dimensao",
+                ("Senioridade", "Área"),
+                key="treemap_permanencia_dimensao",
             )
 
-        coluna = "area" if dimensao == "\u00c1rea" else "senioridade"
-        rotulo_dimensao = "\u00c1rea" if dimensao == "\u00c1rea" else "Cargo"
-        dados_heatmap = (
+        with vazio_col:
+            st.empty()
+
+        coluna = "senioridade" if dimensao == "Senioridade" else "area"
+        dados_treemap = (
             df.dropna(subset=[coluna, "tempo_permanencia_anos"])
-            .loc[lambda dados: dados[coluna] != ""]
+            .loc[lambda dados: dados[coluna].astype(str).str.strip() != ""]
             .groupby(coluna, as_index=False)
             .agg(
                 permanencia_media=("tempo_permanencia_anos", "mean"),
@@ -515,324 +568,672 @@ def render_heatmap_permanencia_media(df: pd.DataFrame) -> None:
             .sort_values("permanencia_media", ascending=False)
         )
 
-        with chart_col:
-            if dados_heatmap.empty:
-                st.info(
-                    "N\u00e3o h\u00e1 dados suficientes para calcular perman\u00eancia "
-                    "m\u00e9dia."
-                )
-                return
-
-            dados_heatmap["permanencia_media"] = dados_heatmap[
-                "permanencia_media"
-            ].round(1)
-            valores = dados_heatmap["permanencia_media"].tolist()
-            categorias = dados_heatmap[coluna].tolist()
-            textos = [[formatar_anos(valor) for valor in valores]]
-            customdata = [dados_heatmap["colaboradores"].tolist()]
-
-            fig = go.Figure(
-                data=go.Heatmap(
-                    z=[valores],
-                    x=categorias,
-                    y=["Tempo m\u00e9dio"],
-                    text=textos,
-                    customdata=customdata,
-                    texttemplate="%{text}",
-                    textfont=dict(color="#111827", size=14),
-                    colorscale=[
-                        [0, "#e0f2fe"],
-                        [0.5, "#22d3ee"],
-                        [1, "#f97316"],
-                    ],
-                    colorbar=dict(
-                        title="Anos",
-                        thickness=14,
-                        len=0.72,
-                    ),
-                    hovertemplate=(
-                        f"{rotulo_dimensao}: %{{x}}<br>"
-                        "Tempo m\u00e9dio: %{z:.1f} anos<br>"
-                        "Colaboradores: %{customdata}<extra></extra>"
-                    ),
-                )
-            )
-            fig.update_layout(
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                margin=dict(l=8, r=8, t=8, b=8),
-                height=310,
-                xaxis=dict(
-                    title=rotulo_dimensao,
-                    tickangle=0,
-                    side="bottom",
-                    automargin=True,
-                ),
-                yaxis=dict(title=""),
-            )
-
-            st.plotly_chart(fig, use_container_width=True)
-
-
-def render_salario_permanencia(df: pd.DataFrame) -> None:
-    with st.container(border=True):
-        st.markdown(
-            '<div class="chart-title">Rela\u00e7\u00e3o entre Sal\u00e1rio e Perman\u00eancia</div>',
-            unsafe_allow_html=True,
-        )
-
-        dispersao = df.dropna(subset=["salario_valor", "tempo_permanencia_anos"]).copy()
-
-        if dispersao.empty:
-            st.info("Nao ha dados suficientes para cruzar salario e permanencia.")
+        if dados_treemap.empty:
+            st.info("Não há dados suficientes para calcular a permanência média.")
             return
 
-        fig = px.scatter(
-            dispersao,
-            x="salario_valor",
-            y="tempo_permanencia_anos",
-            color="senioridade",
-            hover_name="nome_completo",
-            hover_data={
-                "salario_valor": ":,.2f",
-                "tempo_permanencia_anos": ":.1f",
-                "senioridade": True,
-                "area": True,
-                "localizacao": True,
-            },
+        dados_treemap["permanencia_media"] = dados_treemap[
+            "permanencia_media"
+        ].round(2)
+        dados_treemap["tempo_formatado"] = dados_treemap["permanencia_media"].map(
+            formatar_anos
+        )
+        dados_treemap["colaboradores_label"] = dados_treemap["colaboradores"].map(
+            lambda valor: f"{int(valor)} colaboradores"
+        )
+
+        fig = px.treemap(
+            dados_treemap,
+            path=[coluna],
+            values="permanencia_media",
+            color="permanencia_media",
+            color_continuous_scale=["#dc2626", "#f59e0b", "#16a34a"],
+            custom_data=[
+                "tempo_formatado",
+                "colaboradores",
+                "colaboradores_label",
+            ],
             labels={
-                "salario_valor": "Salario",
-                "tempo_permanencia_anos": "Tempo na empresa",
-                "senioridade": "Senioridade",
-                "area": "Area",
-                "localizacao": "Localizacao",
-            },
-            color_discrete_map={
-                "Pleno": "#06b6d4",
-                "Analista J\u00fanior": "#14b8a6",
-                "S\u00eanior": "#8b5cf6",
-                "Gerente": "#f97316",
-                "C-Level": "#2563eb",
+                coluna: dimensao,
+                "permanencia_media": "Tempo médio de permanência",
             },
         )
         fig.update_traces(
-            marker=dict(size=12, opacity=0.82, line=dict(width=1.5, color="#ffffff")),
+            texttemplate=(
+                "<b>%{label}</b><br>"
+                "%{customdata[0]}<br>"
+                "%{customdata[2]}"
+            ),
+            textfont=dict(size=18, color="#ffffff"),
+            marker=dict(line=dict(width=2, color="rgba(255,255,255,.9)")),
+            root_color="rgba(0,0,0,0)",
+            hovertemplate=(
+                f"{dimensao}: %{{label}}<br>"
+                "Tempo médio: %{customdata[0]}<br>"
+                "Colaboradores: %{customdata[1]}<extra></extra>"
+            ),
+        )
+        fig.update_layout(
+            coloraxis_colorbar=dict(
+                title="Anos",
+                thickness=14,
+                len=0.72,
+            ),
+            margin=dict(l=8, r=8, t=14, b=8),
+            height=470,
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#0f172a"),
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+
+def render_titulo_perfil_demografico() -> None:
+    st.markdown(
+        '<h2 class="chart-section-title">Perfil Demográfico</h2>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_grafico_perfil_demografico(df: pd.DataFrame) -> None:
+    with st.container(border=True):
+        render_titulo_perfil_demografico()
+
+        dados_demograficos = (
+            df.dropna(subset=["idade_faixa", "genero", "tempo_permanencia_anos"])
+            .loc[lambda dados: dados["genero"].isin(["Feminino", "Masculino"])]
+            .groupby(["idade_faixa", "genero"], observed=False, as_index=False)
+            .agg(
+                permanencia_media_anos=("tempo_permanencia_anos", "mean"),
+                colaboradores=("nome_completo", "count"),
+            )
+        )
+
+        if dados_demograficos.empty:
+            st.info("Não há dados suficientes para montar o perfil demográfico.")
+            return
+
+        dados_demograficos["permanencia_media_anos"] = dados_demograficos[
+            "permanencia_media_anos"
+        ].round(1)
+        dados_demograficos["rotulo_anos"] = dados_demograficos[
+            "permanencia_media_anos"
+        ].map(formatar_anos)
+
+        fig = px.bar(
+            dados_demograficos,
+            x="idade_faixa",
+            y="permanencia_media_anos",
+            color="genero",
+            barmode="group",
+            text="rotulo_anos",
+            custom_data=["colaboradores", "rotulo_anos"],
+            color_discrete_map={
+                "Feminino": "#14b8a6",
+                "Masculino": "#0ea5e9",
+            },
+            category_orders={
+                "idade_faixa": list(FAIXAS_IDADE),
+                "genero": ["Feminino", "Masculino"],
+            },
+            labels={
+                "idade_faixa": "Faixas etárias",
+                "permanencia_media_anos": "Permanência média (anos)",
+                "genero": "Gênero",
+            },
+        )
+        fig.update_traces(
+            textposition="outside",
+            cliponaxis=False,
+            marker_line_width=1.4,
+            marker_line_color="rgba(255,255,255,.86)",
+            hovertemplate=(
+                "Faixa etária: %{x}<br>"
+                "Gênero: %{fullData.name}<br>"
+                "Permanência média: %{customdata[1]}<br>"
+                "Colaboradores: %{customdata[0]}<extra></extra>"
+            ),
+        )
+        fig.update_layout(
+            legend_title_text="Gênero",
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=8, r=8, t=14, b=8),
+            height=430,
+            xaxis=dict(
+                title="Faixas etárias",
+                showgrid=False,
+            ),
+            yaxis=dict(
+                title="Permanência média (anos)",
+                rangemode="tozero",
+                showgrid=True,
+                gridcolor="#e2e8f0",
+            ),
+            font=dict(color="#0f172a"),
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+
+def render_matriz_perfil_demografico(df: pd.DataFrame) -> None:
+    with st.container(border=True):
+        dados_matriz = (
+            df.dropna(subset=["idade_faixa", "genero", "tempo_permanencia_anos"])
+            .loc[lambda dados: dados["genero"].isin(["Feminino", "Masculino"])]
+            .groupby(["idade_faixa", "genero"], observed=False)
+            .agg(
+                media_anos=("tempo_permanencia_anos", "mean"),
+                colaboradores=("nome_completo", "count"),
+            )
+            .reset_index()
+        )
+
+        if dados_matriz.empty:
+            st.info("Não há dados suficientes para montar a matriz demográfica.")
+            return
+
+        matriz_media = dados_matriz.pivot(
+            index="idade_faixa",
+            columns="genero",
+            values="media_anos",
+        ).reindex(index=FAIXAS_IDADE, columns=["Feminino", "Masculino"])
+        matriz_volume = dados_matriz.pivot(
+            index="idade_faixa",
+            columns="genero",
+            values="colaboradores",
+        ).reindex(index=FAIXAS_IDADE, columns=["Feminino", "Masculino"])
+
+        matriz_texto = matriz_media.copy().astype(object)
+        for faixa in matriz_texto.index:
+            for genero in matriz_texto.columns:
+                media = matriz_media.loc[faixa, genero]
+                volume = matriz_volume.loc[faixa, genero]
+                if pd.isna(media):
+                    matriz_texto.loc[faixa, genero] = "Sem dados"
+                    continue
+
+                quantidade = 0 if pd.isna(volume) else int(volume)
+                matriz_texto.loc[faixa, genero] = (
+                    f"{media:.1f} anos | {quantidade} colaboradores"
+                ).replace(".", ",")
+
+        minimo = matriz_media.min(skipna=True).min(skipna=True)
+        maximo = matriz_media.max(skipna=True).max(skipna=True)
+
+        def estilo_heatmap(_: pd.DataFrame) -> pd.DataFrame:
+            estilos = pd.DataFrame("", index=matriz_texto.index, columns=matriz_texto.columns)
+            for faixa in matriz_texto.index:
+                for genero in matriz_texto.columns:
+                    valor = matriz_media.loc[faixa, genero]
+                    if pd.isna(valor):
+                        estilos.loc[faixa, genero] = (
+                            "background-color: #f8fafc; color: #94a3b8;"
+                        )
+                        continue
+
+                    intensidade = 0.5 if maximo == minimo else (valor - minimo) / (maximo - minimo)
+                    vermelho = int(220 + (22 - 220) * intensidade)
+                    verde = int(38 + (163 - 38) * intensidade)
+                    azul = int(38 + (74 - 38) * intensidade)
+                    texto = "#ffffff" if intensidade < 0.45 else "#0f172a"
+                    estilos.loc[faixa, genero] = (
+                        f"background-color: rgb({vermelho}, {verde}, {azul}); "
+                        f"color: {texto}; font-weight: 800;"
+                    )
+            return estilos
+
+        tabela_estilizada = (
+            matriz_texto.style.apply(estilo_heatmap, axis=None)
+            .set_properties(
+                **{
+                    "border": "1px solid rgba(226, 232, 240, .9)",
+                    "text-align": "center",
+                    "white-space": "normal",
+                }
+            )
+            .set_table_styles(
+                [
+                    {
+                        "selector": "th",
+                        "props": [
+                            ("background-color", "#0f172a"),
+                            ("color", "#ffffff"),
+                            ("font-weight", "800"),
+                            ("text-align", "center"),
+                            ("border", "1px solid rgba(226, 232, 240, .2)"),
+                        ],
+                    },
+                    {
+                        "selector": "td",
+                        "props": [
+                            ("height", "58px"),
+                            ("font-size", "0.95rem"),
+                        ],
+                    },
+                ]
+            )
+        )
+
+        st.dataframe(
+            tabela_estilizada,
+            use_container_width=True,
+            height=250,
+        )
+
+
+def formatar_moeda(valor: float | None) -> str:
+    if valor is None or pd.isna(valor):
+        return "Sem dados"
+
+    texto = f"R$ {valor:,.2f}"
+    return texto.replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def render_titulo_scatter_salario() -> None:
+    st.markdown(
+        (
+            '<h2 class="chart-section-title chart-section-title-dark">'
+            "Relação entre Permanência e Salário"
+            "</h2>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def render_scatter_permanencia_salario(df: pd.DataFrame) -> None:
+    opcoes_cor = {
+        "Senioridade": "senioridade",
+        "Idade": "idade_faixa",
+        "Área": "area",
+        "Gênero": "genero",
+    }
+
+    with st.container(border=True):
+        st.markdown('<span class="scatter-panel-marker"></span>', unsafe_allow_html=True)
+
+        titulo_col, filtro_col = st.columns([3.4, 1.2])
+        with titulo_col:
+            render_titulo_scatter_salario()
+
+        with filtro_col:
+            dimensao = st.selectbox(
+                "Legenda por",
+                list(opcoes_cor.keys()),
+                key="scatter_salario_dimensao",
+            )
+
+        coluna_cor = opcoes_cor[dimensao]
+        dados_scatter = df.dropna(
+            subset=["salario_valor", "tempo_permanencia_anos"]
+        ).copy()
+
+        if dados_scatter.empty:
+            st.info("Não há dados suficientes para cruzar permanência e salário.")
+            return
+
+        grupo = dados_scatter[coluna_cor].astype("string").fillna("Sem dados")
+        dados_scatter["grupo_legenda"] = grupo.replace("", "Sem dados")
+        dados_scatter["salario_formatado"] = dados_scatter["salario_valor"].map(
+            formatar_moeda
+        )
+        dados_scatter["permanencia_formatada"] = dados_scatter[
+            "tempo_permanencia_anos"
+        ].map(formatar_anos)
+
+        fig = px.scatter(
+            dados_scatter,
+            x="salario_valor",
+            y="tempo_permanencia_anos",
+            color="grupo_legenda",
+            hover_name="nome_completo",
+            custom_data=[
+                "salario_formatado",
+                "permanencia_formatada",
+                "grupo_legenda",
+                "area",
+                "senioridade",
+            ],
+            labels={
+                "salario_valor": "Salário",
+                "tempo_permanencia_anos": "Tempo na empresa",
+                "grupo_legenda": dimensao,
+            },
+            color_discrete_sequence=[
+                "#8b5cf6",
+                "#06b6d4",
+                "#f97316",
+                "#14b8a6",
+                "#2563eb",
+                "#22c55e",
+                "#e879f9",
+                "#facc15",
+            ],
+        )
+
+        fig.update_traces(
+            marker=dict(
+                size=14,
+                opacity=0.88,
+                line=dict(width=2, color="rgba(255, 255, 255, .86)"),
+            ),
             hovertemplate=(
                 "<b>%{hovertext}</b><br>"
-                "Salario: R$ %{x:,.2f}<br>"
-                "Tempo na empresa: %{y:.1f} anos<br>"
-                "Senioridade: %{customdata[2]}<br>"
-                "Area: %{customdata[3]}<br>"
-                "Localizacao: %{customdata[4]}<extra></extra>"
+                "Salário: %{customdata[0]}<br>"
+                "Tempo na empresa: %{customdata[1]}<br>"
+                f"{dimensao}: %{{customdata[2]}}<br>"
+                "Área: %{customdata[3]}<br>"
+                "Senioridade: %{customdata[4]}<extra></extra>"
             ),
         )
 
-        salario_medio = dispersao["salario_valor"].mean()
-        permanencia_media = dispersao["tempo_permanencia_anos"].mean()
+        salario_medio = dados_scatter["salario_valor"].mean()
+        permanencia_media = dados_scatter["tempo_permanencia_anos"].mean()
         fig.add_vline(
             x=salario_medio,
             line_dash="dash",
-            line_color="#94a3b8",
-            opacity=0.8,
+            line_width=3,
+            line_color="rgba(226, 232, 240, .58)",
         )
         fig.add_hline(
             y=permanencia_media,
             line_dash="dash",
-            line_color="#94a3b8",
-            opacity=0.8,
+            line_width=3,
+            line_color="rgba(226, 232, 240, .58)",
         )
+
         fig.update_layout(
-            legend_title_text="Senioridade",
+            legend_title_text=dimensao,
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
-            margin=dict(l=8, r=8, t=8, b=8),
+            height=540,
+            margin=dict(l=12, r=16, t=18, b=10),
+            font=dict(color="#e5e7eb", size=14),
+            legend=dict(
+                bgcolor="rgba(3, 10, 31, .28)",
+                bordercolor="rgba(255,255,255,.14)",
+                borderwidth=1,
+                font=dict(color="#f8fafc", size=13),
+            ),
             xaxis=dict(
-                title="Salario",
+                title="Salário",
                 tickprefix="R$ ",
                 separatethousands=True,
                 showgrid=True,
-                gridcolor="#e5e9f2",
+                gridcolor="rgba(226, 232, 240, .72)",
+                zeroline=False,
+                title_font=dict(size=16, color="#f8fafc"),
+                tickfont=dict(color="#e5e7eb"),
             ),
             yaxis=dict(
                 title="Tempo na empresa",
                 ticksuffix=" anos",
                 rangemode="tozero",
                 showgrid=True,
-                gridcolor="#e5e9f2",
+                gridcolor="rgba(226, 232, 240, .72)",
+                zeroline=False,
+                title_font=dict(size=16, color="#f8fafc"),
+                tickfont=dict(color="#e5e7eb"),
             ),
         )
 
         st.plotly_chart(fig, use_container_width=True)
 
 
-def render_graficos(df: pd.DataFrame) -> None:
+def render_tempo_permanencia(df: pd.DataFrame) -> None:
+    render_page_intro(
+        "Ciclo de vida dos colaboradores",
+        "<strong>Quanto tempo os colaboradores permaneceram na empresa</strong>",
+    )
+    render_permanencia_cards(df)
+    render_grafico_perfil_retencao(df)
+    render_treemap_permanencia_media(df)
+    render_grafico_perfil_demografico(df)
+    render_matriz_perfil_demografico(df)
+    render_scatter_permanencia_salario(df)
+
+
+def render_desligamento_cards(df: pd.DataFrame) -> None:
+    desligados = df.dropna(subset=["data_desligamento"]).copy()
+    total_desligamentos = len(desligados)
+
+    anos = desligados["ano_desligamento"].dropna().astype(int)
+    ano_inicio = int(anos.min()) if not anos.empty else None
+    ano_fim = int(anos.max()) if not anos.empty else None
+    anos_registro = (ano_fim - ano_inicio + 1) if ano_inicio and ano_fim else None
+    media_anual = (
+        total_desligamentos / anos_registro
+        if total_desligamentos and anos_registro
+        else None
+    )
+    media_salarial = desligados["salario_valor"].dropna().mean()
+
+    periodo = (
+        f"{ano_inicio} - {ano_fim}"
+        if ano_inicio is not None and ano_fim is not None
+        else "Sem dados"
+    )
+    detalhe_periodo = (
+        f"{anos_registro} anos de registro" if anos_registro else ""
+    )
+
+    st.markdown(
+        f"""
+        <section class="metric-grid">
+            {render_metric_card(
+                "Total de desligamentos",
+                f"{formatar_numero(total_desligamentos)} colaboradores",
+                "#0ea5e9",
+                "100% do histórico",
+                "metric-value-small",
+            )}
+            {render_metric_card(
+                "Período observado",
+                periodo,
+                "#14b8a6",
+                detalhe_periodo,
+            )}
+            {render_metric_card(
+                "Média anual de saídas",
+                f"{formatar_decimal(media_anual)} desligamentos/ano",
+                "#6366f1",
+                "",
+                "metric-value-small",
+            )}
+            {render_metric_card(
+                "Média salarial por desligado",
+                formatar_moeda(media_salarial),
+                "#f97316",
+                "por colaborador desligado",
+                "metric-value-small",
+            )}
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_titulo_evolucao_desligamentos() -> None:
+    st.markdown(
+        '<h2 class="chart-section-title">Evolução dos Desligamentos</h2>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_grafico_evolucao_desligamentos(df: pd.DataFrame) -> None:
     with st.container(border=True):
-        st.markdown(
-            '<div class="chart-title">Desligamentos por \u00c1rea</div>',
-            unsafe_allow_html=True,
-        )
+        render_titulo_evolucao_desligamentos()
 
-        por_area = (
-            df.groupby("area", as_index=False)
+        anos_base = pd.DataFrame({"Ano de desligamento": range(2012, 2024)})
+        desligamentos_ano = (
+            df.dropna(subset=["ano_desligamento"])
+            .assign(ano=lambda dados: dados["ano_desligamento"].astype(int))
+            .groupby("ano", as_index=False)
             .size()
-            .rename(columns={"area": "\u00c1rea", "size": "Desligamentos"})
-            .sort_values("Desligamentos", ascending=False)
+            .rename(columns={"ano": "Ano de desligamento", "size": "Número de saídas"})
         )
-        fig_area = px.treemap(
-            por_area,
-            path=["\u00c1rea"],
-            values="Desligamentos",
-            color="Desligamentos",
-            color_continuous_scale=["#e0f2fe", "#22d3ee", "#f97316"],
-            custom_data=["Desligamentos"],
-        )
-        fig_area.update_traces(
-            texttemplate="<b>%{label}</b><br>%{customdata[0]} desligamentos",
-            hovertemplate=(
-                "\u00c1rea: %{label}<br>"
-                "Desligamentos: %{customdata[0]}<extra></extra>"
-            ),
-            marker=dict(line=dict(width=2, color="#ffffff")),
-            root_color="rgba(0,0,0,0)",
-        )
-        fig_area.update_layout(
-            plot_bgcolor="rgba(0,0,0,0)",
-            paper_bgcolor="rgba(0,0,0,0)",
-            margin=dict(l=8, r=8, t=8, b=8),
-            height=360,
-            coloraxis_showscale=False,
-        )
-        st.plotly_chart(fig_area, use_container_width=True)
+        evolucao = anos_base.merge(
+            desligamentos_ano,
+            on="Ano de desligamento",
+            how="left",
+        ).fillna({"Número de saídas": 0})
+        evolucao["Número de saídas"] = evolucao["Número de saídas"].astype(int)
 
-    st.divider()
-
-    with st.container(border=True):
-        st.markdown(
-            '<div class="chart-title">Desligamentos por Senioridade</div>',
-            unsafe_allow_html=True,
-        )
-
-        por_senioridade = (
-            df.groupby("senioridade", as_index=False)
-            .size()
-            .rename(columns={"senioridade": "Senioridade", "size": "Desligamentos"})
-            .sort_values("Desligamentos", ascending=False)
-        )
-        ordem_senioridade = por_senioridade["Senioridade"].tolist()
-        fig_senioridade = px.bar(
-            por_senioridade,
-            x="Desligamentos",
-            y="Senioridade",
-            orientation="h",
-            text="Desligamentos",
+        fig = px.line(
+            evolucao,
+            x="Ano de desligamento",
+            y="Número de saídas",
+            markers=True,
             labels={
-                "Senioridade": "Senioridade",
-                "Desligamentos": "Desligamentos",
+                "Ano de desligamento": "Ano de desligamento",
+                "Número de saídas": "Número de saídas",
             },
-            color_discrete_sequence=["#8b5cf6"],
+            color_discrete_sequence=["#0ea5e9"],
         )
-        fig_senioridade.update_traces(
-            textposition="outside",
-            cliponaxis=False,
+        fig.update_traces(
+            line=dict(width=4, shape="spline", smoothing=0.55),
+            marker=dict(
+                size=10,
+                color="#0ea5e9",
+                line=dict(width=2.4, color="#ffffff"),
+            ),
             hovertemplate=(
-                "Senioridade: %{y}<br>"
-                "Desligamentos: %{x}<extra></extra>"
+                "Ano: %{x}<br>"
+                "Número de saídas: %{y}<extra></extra>"
             ),
         )
-        fig_senioridade.update_layout(
+
+        destaque = evolucao.loc[evolucao["Ano de desligamento"] == 2021]
+        if not destaque.empty:
+            saidas_2021 = int(destaque["Número de saídas"].iloc[0])
+            fig.add_scatter(
+                x=[2021],
+                y=[saidas_2021],
+                mode="markers+text",
+                marker=dict(
+                    size=18,
+                    color="#f97316",
+                    line=dict(width=3, color="#ffffff"),
+                ),
+                text=[f"Pico: {saidas_2021} saídas"],
+                textposition="top center",
+                textfont=dict(color="#0f172a", size=13),
+                hovertemplate=(
+                    "Ano: 2021<br>"
+                    f"Número de saídas: {saidas_2021}<extra></extra>"
+                ),
+                showlegend=False,
+            )
+
+        fig.update_layout(
             showlegend=False,
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
-            margin=dict(l=8, r=96, t=8, b=8),
+            margin=dict(l=8, r=8, t=14, b=8),
+            height=430,
             xaxis=dict(
-                title="Desligamentos",
+                title="Ano de desligamento",
+                tickmode="linear",
+                dtick=1,
+                range=[2011.7, 2023.3],
+                showgrid=False,
+            ),
+            yaxis=dict(
+                title="Número de saídas",
                 rangemode="tozero",
                 dtick=1,
                 showgrid=True,
-                gridcolor="#e5e9f2",
+                gridcolor="#e2e8f0",
             ),
-            yaxis=dict(
-                title="",
-                categoryorder="array",
-                categoryarray=list(reversed(ordem_senioridade)),
-            ),
+            font=dict(color="#0f172a"),
         )
-        st.plotly_chart(fig_senioridade, use_container_width=True)
+
+        st.plotly_chart(fig, use_container_width=True)
 
 
-def render_mapa_colaboradores(df: pd.DataFrame) -> None:
+def render_titulo_mapa_desligamentos() -> None:
+    st.markdown(
+        '<h2 class="chart-section-title">Distribuição Geográfica dos Desligamentos</h2>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_mapa_desligamentos(df: pd.DataFrame) -> None:
     with st.container(border=True):
-        st.markdown(
-            '<div class="chart-title">Distribui\u00e7\u00e3o Geogr\u00e1fica dos Colaboradores</div>',
-            unsafe_allow_html=True,
+        render_titulo_mapa_desligamentos()
+
+        desligados = (
+            df.dropna(subset=["data_desligamento", "localizacao", "ano_desligamento"])
+            .loc[lambda dados: dados["localizacao"].astype(str).str.strip() != ""]
+            .assign(
+                iso3=lambda dados: dados["localizacao"].map(PAIS_ISO3),
+                ano=lambda dados: dados["ano_desligamento"].astype(int),
+            )
+            .dropna(subset=["iso3"])
         )
 
-        mapa = (
-            df.assign(iso3=lambda dados: dados["localizacao"].map(PAIS_ISO3))
-            .dropna(subset=["iso3", "localizacao"])
-            .loc[lambda dados: dados["localizacao"] != ""]
-            .copy()
-        )
-
-        if mapa.empty:
-            st.info("N\u00e3o h\u00e1 pa\u00edses reconhecidos para exibir no mapa.")
+        if desligados.empty:
+            st.info("Não há países reconhecidos para exibir no mapa.")
             return
 
         linhas = []
-        for pais, grupo in mapa.groupby("localizacao", sort=True):
-            colaboradores = (
-                grupo[["nome_completo", "area"]]
-                .sort_values(["area", "nome_completo"])
-                .apply(
-                    lambda linha: (
-                        f"{escape(str(linha['nome_completo']))} "
-                        f"- {escape(str(linha['area']))}"
-                    ),
-                    axis=1,
-                )
-                .tolist()
+        for pais, grupo in desligados.groupby("localizacao", sort=True):
+            por_ano = (
+                grupo.groupby("ano")
+                .size()
+                .rename("saidas")
+                .reset_index()
+                .sort_values("ano")
+            )
+            detalhe_anos = "<br>".join(
+                f"{int(linha.ano)}: {int(linha.saidas)} saída(s)"
+                for linha in por_ano.itertuples(index=False)
             )
             linhas.append(
                 {
-                    "pais": pais,
+                    "País": pais,
                     "iso3": grupo["iso3"].iloc[0],
-                    "colaboradores": len(grupo),
-                    "detalhes": "<br>".join(colaboradores),
+                    "Desligamentos": len(grupo),
+                    "Quando": detalhe_anos,
                 }
             )
 
-        dados_mapa = pd.DataFrame(linhas).sort_values("colaboradores", ascending=False)
-        customdata = dados_mapa[["colaboradores", "detalhes"]].to_numpy()
+        dados_mapa = pd.DataFrame(linhas).sort_values(
+            "Desligamentos",
+            ascending=False,
+        )
 
-        fig = go.Figure(
-            data=go.Choropleth(
-                locations=dados_mapa["iso3"],
-                z=dados_mapa["colaboradores"],
-                text=dados_mapa["pais"],
-                customdata=customdata,
-                colorscale=[
-                    [0, "#bae6fd"],
-                    [0.5, "#22d3ee"],
-                    [1, "#f97316"],
-                ],
-                marker_line_color="#ffffff",
-                marker_line_width=0.8,
-                colorbar=dict(
-                    title="Colaboradores",
-                    thickness=14,
-                    len=0.72,
-                ),
-                hovertemplate=(
-                    "<b>%{text}</b><br>"
-                    "Colaboradores: %{customdata[0]}<br><br>"
-                    "%{customdata[1]}<extra></extra>"
-                ),
-            )
+        fig = px.choropleth(
+            dados_mapa,
+            locations="iso3",
+            locationmode="ISO-3",
+            color="Desligamentos",
+            hover_name="País",
+            custom_data=["Desligamentos", "Quando"],
+            color_continuous_scale=["#dbeafe", "#38bdf8", "#f97316"],
+            labels={"Desligamentos": "Desligamentos"},
+        )
+        fig.update_traces(
+            marker_line_color="rgba(255,255,255,.88)",
+            marker_line_width=0.9,
+            hovertemplate=(
+                "<b>%{hovertext}</b><br>"
+                "Desligamentos: %{customdata[0]}<br><br>"
+                "%{customdata[1]}<extra></extra>"
+            ),
         )
         fig.update_layout(
-            margin=dict(l=8, r=8, t=8, b=8),
+            coloraxis_colorbar=dict(
+                title="Saídas",
+                thickness=14,
+                len=0.72,
+            ),
+            margin=dict(l=8, r=8, t=14, b=8),
             height=520,
             paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#0f172a"),
             geo=dict(
                 bgcolor="rgba(0,0,0,0)",
                 projection_type="natural earth",
@@ -842,7 +1243,7 @@ def render_mapa_colaboradores(df: pd.DataFrame) -> None:
                 showcountries=True,
                 countrycolor="rgba(15, 23, 42, .24)",
                 showland=True,
-                landcolor="rgba(248, 250, 252, .42)",
+                landcolor="rgba(248, 250, 252, .7)",
                 showocean=True,
                 oceancolor="rgba(14, 165, 233, .12)",
             ),
@@ -851,19 +1252,206 @@ def render_mapa_colaboradores(df: pd.DataFrame) -> None:
         st.plotly_chart(fig, use_container_width=True)
 
 
+def render_treemap_desligamentos(df: pd.DataFrame) -> None:
+    opcoes_dimensao = {
+        "Senioridade": "senioridade",
+        "Área": "area",
+        "Idade": "idade_faixa",
+    }
+
+    with st.container(border=True):
+        st.markdown('<span class="dark-panel-marker"></span>', unsafe_allow_html=True)
+
+        titulo_col, filtro_col = st.columns([3.4, 1.2])
+        with filtro_col:
+            dimensao = st.selectbox(
+                "Visualizar por",
+                list(opcoes_dimensao.keys()),
+                index=1,
+                key="treemap_desligamentos_dimensao",
+            )
+
+        with titulo_col:
+            st.markdown(
+                (
+                    '<h2 class="chart-section-title chart-section-title-dark">'
+                    f"Desligamentos por {dimensao}"
+                    "</h2>"
+                ),
+                unsafe_allow_html=True,
+            )
+
+        coluna = opcoes_dimensao[dimensao]
+        dados_treemap = (
+            df.dropna(subset=["data_desligamento", coluna])
+            .loc[lambda dados: dados[coluna].astype(str).str.strip() != ""]
+            .groupby(coluna, observed=False, as_index=False)
+            .agg(
+                desligamentos=("nome_completo", "count"),
+                salario_medio=("salario_valor", "mean"),
+            )
+            .sort_values("desligamentos", ascending=False)
+        )
+
+        if dados_treemap.empty:
+            st.info("Não há dados suficientes para montar o treemap de desligamentos.")
+            return
+
+        desligados_genero = (
+            df.dropna(subset=["data_desligamento", "genero"])
+            .loc[lambda dados: dados["genero"].isin(["Feminino", "Masculino"])]
+            .assign(
+                genero_label=lambda dados: dados["genero"].replace(
+                    {
+                        "Feminino": "Mulheres",
+                        "Masculino": "Homens",
+                    }
+                )
+            )
+            .groupby("genero_label", as_index=False)
+            .size()
+            .rename(columns={"size": "desligamentos"})
+        )
+        base_genero = pd.DataFrame({"genero_label": ["Mulheres", "Homens"]})
+        dados_genero = (
+            base_genero.merge(desligados_genero, on="genero_label", how="left")
+            .fillna({"desligamentos": 0})
+        )
+        dados_genero["desligamentos"] = dados_genero["desligamentos"].astype(int)
+
+        dados_treemap["label_desligamentos"] = dados_treemap["desligamentos"].map(
+            lambda valor: (
+                f"{int(valor)} desligamento"
+                if int(valor) == 1
+                else f"{int(valor)} desligamentos"
+            )
+        )
+        dados_treemap["salario_medio_formatado"] = dados_treemap[
+            "salario_medio"
+        ].map(formatar_moeda)
+
+        fig = px.treemap(
+            dados_treemap,
+            path=[coluna],
+            values="desligamentos",
+            color="desligamentos",
+            color_continuous_scale=["#dbeafe", "#22d3ee", "#f97316"],
+            custom_data=[
+                "label_desligamentos",
+                "salario_medio_formatado",
+            ],
+            labels={
+                coluna: dimensao,
+                "desligamentos": "Desligamentos",
+            },
+        )
+        fig.update_traces(
+            texttemplate="<b>%{label}</b><br>%{customdata[0]}",
+            textfont=dict(size=17, color="#0f172a"),
+            marker=dict(line=dict(width=3, color="#ffffff")),
+            root_color="rgba(255,255,255,.24)",
+            hovertemplate=(
+                f"{dimensao}: %{{label}}<br>"
+                "%{customdata[0]}<br>"
+                "Média salarial: %{customdata[1]}<extra></extra>"
+            ),
+        )
+        fig.update_layout(
+            coloraxis_showscale=False,
+            margin=dict(l=8, r=8, t=14, b=8),
+            height=500,
+            paper_bgcolor="rgba(255,255,255,.92)",
+            plot_bgcolor="rgba(255,255,255,.92)",
+            font=dict(color="#0f172a"),
+        )
+
+        treemap_col, rosca_col = st.columns([2.15, 1])
+        with treemap_col:
+            st.plotly_chart(fig, use_container_width=True)
+
+        with rosca_col:
+            st.markdown(
+                (
+                    '<h2 class="chart-section-title chart-section-title-dark">'
+                    "Desligamento por gênero"
+                    "</h2>"
+                ),
+                unsafe_allow_html=True,
+            )
+
+            fig_rosca = px.pie(
+                dados_genero,
+                names="genero_label",
+                values="desligamentos",
+                hole=0.58,
+                color="genero_label",
+                color_discrete_map={
+                    "Mulheres": "#14b8a6",
+                    "Homens": "#8b5cf6",
+                },
+            )
+            fig_rosca.update_traces(
+                textposition="inside",
+                texttemplate="<b>%{label}</b><br>%{value}<br>%{percent}",
+                textfont=dict(color="#ffffff", size=15),
+                marker=dict(line=dict(width=3, color="rgba(255,255,255,.92)")),
+                hovertemplate=(
+                    "%{label}<br>"
+                    "Desligamentos: %{value}<br>"
+                    "Participação: %{percent}<extra></extra>"
+                ),
+            )
+            fig_rosca.update_layout(
+                showlegend=True,
+                legend_title_text="Gênero",
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=-0.14,
+                    xanchor="center",
+                    x=0.5,
+                    font=dict(color="#f8fafc", size=12),
+                ),
+                annotations=[
+                    dict(
+                        text=(
+                            f"<b>{int(dados_genero['desligamentos'].sum())}</b><br>"
+                            "total"
+                        ),
+                        x=0.5,
+                        y=0.5,
+                        showarrow=False,
+                        font=dict(color="#f8fafc", size=18),
+                    )
+                ],
+                margin=dict(l=8, r=8, t=14, b=44),
+                height=500,
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#f8fafc"),
+            )
+
+            st.plotly_chart(fig_rosca, use_container_width=True)
+
+
+def render_desligamentos(df: pd.DataFrame) -> None:
+    render_page_intro(
+        "Análise do desligamento dos colaboradores",
+        (
+            "Mapeia o <strong>ritmo</strong>, a <strong>geografia</strong> "
+            "e o <strong>impacto financeiro</strong> da desmobilização da equipe "
+            "ao longo dos anos."
+        ),
+    )
+    render_desligamento_cards(df)
+    render_grafico_evolucao_desligamentos(df)
+    render_mapa_desligamentos(df)
+    render_treemap_desligamentos(df)
+
+
 def main() -> None:
     aplicar_estilos()
-
-    st.markdown(
-        """
-        <section class="hero">
-            <div class="hero-label">People Analytics</div>
-            <h1>Painel de Rotatividade de Colaboradores</h1>
-            <p>Análise de desligamentos e período de permanência dos colaboradores</p>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
+    pagina = render_sidebar()
 
     try:
         df = carregar_dados()
@@ -871,30 +1459,10 @@ def main() -> None:
         st.error(f"Nao foi possivel carregar a planilha: {exc}")
         st.stop()
 
-    df_filtrado = aplicar_filtros(df)
-
-    render_visao_geral(df_filtrado)
-
-    if df_filtrado.empty:
-        st.info("Nenhum desligamento encontrado para os filtros selecionados.")
-        st.stop()
-
-    render_evolucao_desligamentos(df_filtrado)
-    st.divider()
-
-    render_tempo_permanencia(df_filtrado)
-    st.divider()
-
-    render_heatmap_permanencia_media(df_filtrado)
-    st.divider()
-
-    render_salario_permanencia(df_filtrado)
-    st.divider()
-
-    render_graficos(df_filtrado)
-    st.divider()
-
-    render_mapa_colaboradores(df_filtrado)
+    if pagina == "Tempo de permanência":
+        render_tempo_permanencia(df)
+    elif pagina == "Desligamentos":
+        render_desligamentos(df)
 
 
 if __name__ == "__main__":
