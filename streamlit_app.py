@@ -160,11 +160,13 @@ def aplicar_estilos() -> None:
             font-size: 2rem;
             font-weight: 850;
             letter-spacing: 0;
-            line-height: 1;
-            white-space: nowrap;
+            line-height: 1.08;
+            overflow-wrap: anywhere;
+            white-space: normal;
         }}
         .metric-value-small {{
-            font-size: 1.55rem;
+            font-size: 1.34rem;
+            line-height: 1.15;
         }}
         .metric-detail {{
             color: #64748b;
@@ -357,10 +359,10 @@ def render_sidebar() -> str:
 def render_page_intro(titulo: str, subtitulo: str) -> None:
     st.markdown(
         f"""
-        <section class="page-intro">
+        <div class="page-intro">
             <h1>{titulo}</h1>
             <p>{subtitulo}</p>
-        </section>
+        </div>
         """,
         unsafe_allow_html=True,
     )
@@ -824,24 +826,19 @@ def render_desligamento_cards(df: pd.DataFrame) -> None:
         if ano_inicio is not None and ano_fim is not None
         else "Sem dados"
     )
-    detalhe_periodo = (
-        f"{anos_registro} anos de registro" if anos_registro else ""
-    )
-
     cards = "".join(
         [
             render_metric_card(
                 "Total de desligamentos",
                 f"{formatar_numero(total_desligamentos)} colaboradores",
                 "#0ea5e9",
-                "100% do histórico",
+                "",
                 "metric-value-small",
             ),
             render_metric_card(
                 "Período observado",
                 periodo,
                 "#14b8a6",
-                detalhe_periodo,
             ),
             render_metric_card(
                 "Média anual de saídas",
@@ -854,7 +851,7 @@ def render_desligamento_cards(df: pd.DataFrame) -> None:
                 "Média salarial por desligado",
                 formatar_moeda(media_salarial),
                 "#f97316",
-                "por colaborador desligado",
+                "",
                 "metric-value-small",
             ),
         ]
