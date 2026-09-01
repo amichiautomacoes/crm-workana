@@ -691,10 +691,11 @@ def render_scatter_permanencia_salario(df: pd.DataFrame) -> None:
         dados_scatter["permanencia_formatada"] = dados_scatter[
             "tempo_permanencia_anos"
         ].map(formatar_anos)
+        dados_scatter["salario_mil"] = dados_scatter["salario_valor"] / 1000
 
         fig = px.scatter(
             dados_scatter,
-            x="salario_valor",
+            x="salario_mil",
             y="tempo_permanencia_anos",
             color="grupo_legenda",
             hover_name="nome_completo",
@@ -706,7 +707,7 @@ def render_scatter_permanencia_salario(df: pd.DataFrame) -> None:
                 "senioridade",
             ],
             labels={
-                "salario_valor": "Salário",
+                "salario_mil": "Salário (R$ mil)",
                 "tempo_permanencia_anos": "Tempo na empresa",
                 "grupo_legenda": dimensao,
             },
@@ -738,7 +739,7 @@ def render_scatter_permanencia_salario(df: pd.DataFrame) -> None:
             ),
         )
 
-        salario_medio = dados_scatter["salario_valor"].mean()
+        salario_medio = dados_scatter["salario_mil"].mean()
         permanencia_media = dados_scatter["tempo_permanencia_anos"].mean()
         fig.add_vline(
             x=salario_medio,
@@ -767,9 +768,10 @@ def render_scatter_permanencia_salario(df: pd.DataFrame) -> None:
                 font=dict(color="#f8fafc", size=13),
             ),
             xaxis=dict(
-                title="Salário",
+                title="Salário (R$ mil)",
                 tickprefix="R$ ",
-                separatethousands=True,
+                ticksuffix=" mil",
+                separatethousands=False,
                 showgrid=True,
                 gridcolor="rgba(226, 232, 240, .72)",
                 zeroline=False,
