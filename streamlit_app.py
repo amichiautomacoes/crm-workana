@@ -30,7 +30,6 @@ FAIXAS_IDADE = (
     "Acima de 45 anos",
 )
 FILTROS_PERMANENCIA = {
-    "País": "localizacao",
     "Área": "area",
     "Senioridade": "senioridade",
     "Idade": "idade_faixa",
@@ -443,15 +442,16 @@ def render_grafico_perfil_retencao(df: pd.DataFrame) -> None:
     with st.container(border=True):
         render_titulo_grafico_permanencia()
 
-        controle_col, vazio_col = st.columns([1.25, 3.75])
-        with controle_col:
+        criterio_col, valores_col, vazio_col = st.columns([1.05, 1.55, 2.4])
+        with criterio_col:
             criterio = st.selectbox(
                 "Filtrar por",
                 list(FILTROS_PERMANENCIA.keys()),
                 key="permanencia_filtro_criterio",
             )
 
-            coluna_filtro = FILTROS_PERMANENCIA[criterio]
+        coluna_filtro = FILTROS_PERMANENCIA[criterio]
+        with valores_col:
             valores_filtro = st.multiselect(
                 criterio,
                 opcoes_coluna(df, coluna_filtro),
