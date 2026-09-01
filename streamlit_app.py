@@ -862,20 +862,59 @@ def render_titulo_evolucao_desligamentos() -> None:
 
 
 def render_grafico_evolucao_desligamentos(df: pd.DataFrame) -> None:
+    opcoes_dimensao = {
+        "Senioridade": "senioridade",
+        "Área": "area",
+        "Idade": "idade_faixa",
+    }
+
     with st.container(border=True):
         render_titulo_evolucao_desligamentos()
 
-        anos_base = pd.DataFrame({"Ano de desligamento": range(2012, 2024)})
+        controle_col, vazio_col = st.columns([1.05, 3.95])
+        with controle_col:
+            dimensao = st.selectbox(
+                "Visualizar por",
+                list(opcoes_dimensao.keys()),
+                index=1,
+                key="evolucao_desligamentos_dimensao",
+            )
+
+        with vazio_col:
+            st.empty()
+
+        coluna = opcoes_dimensao[dimensao]
+        anos = list(range(2012, 2024))
+        categorias = opcoes_coluna(df, coluna)
+        if coluna == "idade_faixa":
+            categorias = [faixa for faixa in FAIXAS_IDADE if faixa in categorias]
+
+        if not categorias:
+            st.info("Não há dados suficientes para montar a evolução dos desligamentos.")
+            return
+
+        anos_base = pd.MultiIndex.from_product(
+            [anos, categorias],
+            names=["Ano de desligamento", dimensao],
+        ).to_frame(index=False)
         desligamentos_ano = (
-            df.dropna(subset=["ano_desligamento"])
-            .assign(ano=lambda dados: dados["ano_desligamento"].astype(int))
-            .groupby("ano", as_index=False)
+            df.dropna(subset=["ano_desligamento", coluna])
+            .loc[lambda dados: dados[coluna].astype(str).str.strip() != ""]
+            .assign(
+                **{
+                    "Ano de desligamento": lambda dados: dados[
+                        "ano_desligamento"
+                    ].astype(int),
+                    dimensao: lambda dados: dados[coluna].astype(str),
+                }
+            )
+            .groupby(["Ano de desligamento", dimensao], observed=False, as_index=False)
             .size()
-            .rename(columns={"ano": "Ano de desligamento", "size": "Número de saídas"})
+            .rename(columns={"size": "Número de saídas"})
         )
         evolucao = anos_base.merge(
             desligamentos_ano,
-            on="Ano de desligamento",
+            on=["Ano de desligamento", dimensao],
             how="left",
         ).fillna({"Número de saídas": 0})
         evolucao["Número de saídas"] = evolucao["Número de saídas"].astype(int)
@@ -884,50 +923,39 @@ def render_grafico_evolucao_desligamentos(df: pd.DataFrame) -> None:
             evolucao,
             x="Ano de desligamento",
             y="Número de saídas",
+            color=dimensao,
             markers=True,
             labels={
                 "Ano de desligamento": "Ano de desligamento",
                 "Número de saídas": "Número de saídas",
+                dimensao: dimensao,
             },
-            color_discrete_sequence=["#0ea5e9"],
+            color_discrete_sequence=[
+                "#0ea5e9",
+                "#14b8a6",
+                "#6366f1",
+                "#f97316",
+                "#22c55e",
+                "#e879f9",
+                "#facc15",
+            ],
         )
         fig.update_traces(
             line=dict(width=4, shape="spline", smoothing=0.55),
             marker=dict(
                 size=10,
-                color="#0ea5e9",
                 line=dict(width=2.4, color="#ffffff"),
             ),
             hovertemplate=(
                 "Ano: %{x}<br>"
+                f"{dimensao}: %{{fullData.name}}<br>"
                 "Número de saídas: %{y}<extra></extra>"
             ),
         )
 
-        destaque = evolucao.loc[evolucao["Ano de desligamento"] == 2021]
-        if not destaque.empty:
-            saidas_2021 = int(destaque["Número de saídas"].iloc[0])
-            fig.add_scatter(
-                x=[2021],
-                y=[saidas_2021],
-                mode="markers+text",
-                marker=dict(
-                    size=18,
-                    color="#f97316",
-                    line=dict(width=3, color="#ffffff"),
-                ),
-                text=[f"Pico: {saidas_2021} saídas"],
-                textposition="top center",
-                textfont=dict(color="#0f172a", size=13),
-                hovertemplate=(
-                    "Ano: 2021<br>"
-                    f"Número de saídas: {saidas_2021}<extra></extra>"
-                ),
-                showlegend=False,
-            )
-
         fig.update_layout(
-            showlegend=False,
+            showlegend=True,
+            legend_title_text=dimensao,
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
             margin=dict(l=8, r=8, t=14, b=8),
