@@ -175,13 +175,15 @@ def aplicar_estilos() -> None:
             margin-top: 12px;
         }}
         .chart-section-title {{
+            box-sizing: border-box;
             color: #0f172a;
+            display: block;
             font-size: 1.48rem;
             font-weight: 850;
             line-height: 1.18;
             letter-spacing: 0;
             margin: 2px 0 20px;
-            padding-left: 14px;
+            padding-left: 28px !important;
             position: relative;
         }}
         .chart-section-title::before {{
