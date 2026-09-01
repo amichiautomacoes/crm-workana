@@ -33,7 +33,6 @@ FILTROS_PERMANENCIA = {
     "País": "localizacao",
     "Área": "area",
     "Senioridade": "senioridade",
-    "Gênero": "genero",
     "Idade": "idade_faixa",
     "Salário": "salario_faixa",
 }
@@ -629,200 +628,6 @@ def render_treemap_permanencia_media(df: pd.DataFrame) -> None:
         st.plotly_chart(fig, use_container_width=True)
 
 
-def render_titulo_perfil_demografico() -> None:
-    st.markdown(
-        '<h2 class="chart-section-title">Perfil Demográfico</h2>',
-        unsafe_allow_html=True,
-    )
-
-
-def render_grafico_perfil_demografico(df: pd.DataFrame) -> None:
-    with st.container(border=True):
-        render_titulo_perfil_demografico()
-
-        dados_demograficos = (
-            df.dropna(subset=["idade_faixa", "genero", "tempo_permanencia_anos"])
-            .loc[lambda dados: dados["genero"].isin(["Feminino", "Masculino"])]
-            .groupby(["idade_faixa", "genero"], observed=False, as_index=False)
-            .agg(
-                permanencia_media_anos=("tempo_permanencia_anos", "mean"),
-                colaboradores=("nome_completo", "count"),
-            )
-        )
-
-        if dados_demograficos.empty:
-            st.info("Não há dados suficientes para montar o perfil demográfico.")
-            return
-
-        dados_demograficos["permanencia_media_anos"] = dados_demograficos[
-            "permanencia_media_anos"
-        ].round(1)
-        dados_demograficos["rotulo_anos"] = dados_demograficos[
-            "permanencia_media_anos"
-        ].map(formatar_anos)
-
-        fig = px.bar(
-            dados_demograficos,
-            x="idade_faixa",
-            y="permanencia_media_anos",
-            color="genero",
-            barmode="group",
-            text="rotulo_anos",
-            custom_data=["colaboradores", "rotulo_anos"],
-            color_discrete_map={
-                "Feminino": "#14b8a6",
-                "Masculino": "#0ea5e9",
-            },
-            category_orders={
-                "idade_faixa": list(FAIXAS_IDADE),
-                "genero": ["Feminino", "Masculino"],
-            },
-            labels={
-                "idade_faixa": "Faixas etárias",
-                "permanencia_media_anos": "Permanência média (anos)",
-                "genero": "Gênero",
-            },
-        )
-        fig.update_traces(
-            textposition="outside",
-            cliponaxis=False,
-            marker_line_width=1.4,
-            marker_line_color="rgba(255,255,255,.86)",
-            hovertemplate=(
-                "Faixa etária: %{x}<br>"
-                "Gênero: %{fullData.name}<br>"
-                "Permanência média: %{customdata[1]}<br>"
-                "Colaboradores: %{customdata[0]}<extra></extra>"
-            ),
-        )
-        fig.update_layout(
-            legend_title_text="Gênero",
-            plot_bgcolor="rgba(0,0,0,0)",
-            paper_bgcolor="rgba(0,0,0,0)",
-            margin=dict(l=8, r=8, t=14, b=8),
-            height=430,
-            xaxis=dict(
-                title="Faixas etárias",
-                showgrid=False,
-            ),
-            yaxis=dict(
-                title="Permanência média (anos)",
-                rangemode="tozero",
-                showgrid=True,
-                gridcolor="#e2e8f0",
-            ),
-            font=dict(color="#0f172a"),
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-
-def render_matriz_perfil_demografico(df: pd.DataFrame) -> None:
-    with st.container(border=True):
-        dados_matriz = (
-            df.dropna(subset=["idade_faixa", "genero", "tempo_permanencia_anos"])
-            .loc[lambda dados: dados["genero"].isin(["Feminino", "Masculino"])]
-            .groupby(["idade_faixa", "genero"], observed=False)
-            .agg(
-                media_anos=("tempo_permanencia_anos", "mean"),
-                colaboradores=("nome_completo", "count"),
-            )
-            .reset_index()
-        )
-
-        if dados_matriz.empty:
-            st.info("Não há dados suficientes para montar a matriz demográfica.")
-            return
-
-        matriz_media = dados_matriz.pivot(
-            index="idade_faixa",
-            columns="genero",
-            values="media_anos",
-        ).reindex(index=FAIXAS_IDADE, columns=["Feminino", "Masculino"])
-        matriz_volume = dados_matriz.pivot(
-            index="idade_faixa",
-            columns="genero",
-            values="colaboradores",
-        ).reindex(index=FAIXAS_IDADE, columns=["Feminino", "Masculino"])
-
-        matriz_texto = matriz_media.copy().astype(object)
-        for faixa in matriz_texto.index:
-            for genero in matriz_texto.columns:
-                media = matriz_media.loc[faixa, genero]
-                volume = matriz_volume.loc[faixa, genero]
-                if pd.isna(media):
-                    matriz_texto.loc[faixa, genero] = "Sem dados"
-                    continue
-
-                quantidade = 0 if pd.isna(volume) else int(volume)
-                matriz_texto.loc[faixa, genero] = (
-                    f"{media:.1f} anos | {quantidade} colaboradores"
-                ).replace(".", ",")
-
-        minimo = matriz_media.min(skipna=True).min(skipna=True)
-        maximo = matriz_media.max(skipna=True).max(skipna=True)
-
-        def estilo_heatmap(_: pd.DataFrame) -> pd.DataFrame:
-            estilos = pd.DataFrame("", index=matriz_texto.index, columns=matriz_texto.columns)
-            for faixa in matriz_texto.index:
-                for genero in matriz_texto.columns:
-                    valor = matriz_media.loc[faixa, genero]
-                    if pd.isna(valor):
-                        estilos.loc[faixa, genero] = (
-                            "background-color: #f8fafc; color: #94a3b8;"
-                        )
-                        continue
-
-                    intensidade = 0.5 if maximo == minimo else (valor - minimo) / (maximo - minimo)
-                    vermelho = int(220 + (22 - 220) * intensidade)
-                    verde = int(38 + (163 - 38) * intensidade)
-                    azul = int(38 + (74 - 38) * intensidade)
-                    texto = "#ffffff" if intensidade < 0.45 else "#0f172a"
-                    estilos.loc[faixa, genero] = (
-                        f"background-color: rgb({vermelho}, {verde}, {azul}); "
-                        f"color: {texto}; font-weight: 800;"
-                    )
-            return estilos
-
-        tabela_estilizada = (
-            matriz_texto.style.apply(estilo_heatmap, axis=None)
-            .set_properties(
-                **{
-                    "border": "1px solid rgba(226, 232, 240, .9)",
-                    "text-align": "center",
-                    "white-space": "normal",
-                }
-            )
-            .set_table_styles(
-                [
-                    {
-                        "selector": "th",
-                        "props": [
-                            ("background-color", "#0f172a"),
-                            ("color", "#ffffff"),
-                            ("font-weight", "800"),
-                            ("text-align", "center"),
-                            ("border", "1px solid rgba(226, 232, 240, .2)"),
-                        ],
-                    },
-                    {
-                        "selector": "td",
-                        "props": [
-                            ("height", "58px"),
-                            ("font-size", "0.95rem"),
-                        ],
-                    },
-                ]
-            )
-        )
-
-        st.dataframe(
-            tabela_estilizada,
-            use_container_width=True,
-            height=250,
-        )
-
-
 def formatar_moeda(valor: float | None) -> str:
     if valor is None or pd.isna(valor):
         return "Sem dados"
@@ -847,7 +652,6 @@ def render_scatter_permanencia_salario(df: pd.DataFrame) -> None:
         "Senioridade": "senioridade",
         "Idade": "idade_faixa",
         "Área": "area",
-        "Gênero": "genero",
     }
 
     with st.container(border=True):
@@ -989,8 +793,6 @@ def render_tempo_permanencia(df: pd.DataFrame) -> None:
     render_permanencia_cards(df)
     render_grafico_perfil_retencao(df)
     render_treemap_permanencia_media(df)
-    render_grafico_perfil_demografico(df)
-    render_matriz_perfil_demografico(df)
     render_scatter_permanencia_salario(df)
 
 
@@ -1297,28 +1099,6 @@ def render_treemap_desligamentos(df: pd.DataFrame) -> None:
             st.info("Não há dados suficientes para montar o treemap de desligamentos.")
             return
 
-        desligados_genero = (
-            df.dropna(subset=["data_desligamento", "genero"])
-            .loc[lambda dados: dados["genero"].isin(["Feminino", "Masculino"])]
-            .assign(
-                genero_label=lambda dados: dados["genero"].replace(
-                    {
-                        "Feminino": "Mulheres",
-                        "Masculino": "Homens",
-                    }
-                )
-            )
-            .groupby("genero_label", as_index=False)
-            .size()
-            .rename(columns={"size": "desligamentos"})
-        )
-        base_genero = pd.DataFrame({"genero_label": ["Mulheres", "Homens"]})
-        dados_genero = (
-            base_genero.merge(desligados_genero, on="genero_label", how="left")
-            .fillna({"desligamentos": 0})
-        )
-        dados_genero["desligamentos"] = dados_genero["desligamentos"].astype(int)
-
         dados_treemap["label_desligamentos"] = dados_treemap["desligamentos"].map(
             lambda valor: (
                 f"{int(valor)} desligamento"
@@ -1365,73 +1145,7 @@ def render_treemap_desligamentos(df: pd.DataFrame) -> None:
             font=dict(color="#0f172a"),
         )
 
-        treemap_col, rosca_col = st.columns([2.15, 1])
-        with treemap_col:
-            st.plotly_chart(fig, use_container_width=True)
-
-        with rosca_col:
-            st.markdown(
-                (
-                    '<h2 class="chart-section-title chart-section-title-dark">'
-                    "Desligamento por gênero"
-                    "</h2>"
-                ),
-                unsafe_allow_html=True,
-            )
-
-            fig_rosca = px.pie(
-                dados_genero,
-                names="genero_label",
-                values="desligamentos",
-                hole=0.58,
-                color="genero_label",
-                color_discrete_map={
-                    "Mulheres": "#14b8a6",
-                    "Homens": "#8b5cf6",
-                },
-            )
-            fig_rosca.update_traces(
-                textposition="inside",
-                texttemplate="<b>%{label}</b><br>%{value}<br>%{percent}",
-                textfont=dict(color="#ffffff", size=15),
-                marker=dict(line=dict(width=3, color="rgba(255,255,255,.92)")),
-                hovertemplate=(
-                    "%{label}<br>"
-                    "Desligamentos: %{value}<br>"
-                    "Participação: %{percent}<extra></extra>"
-                ),
-            )
-            fig_rosca.update_layout(
-                showlegend=True,
-                legend_title_text="Gênero",
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom",
-                    y=-0.14,
-                    xanchor="center",
-                    x=0.5,
-                    font=dict(color="#f8fafc", size=12),
-                ),
-                annotations=[
-                    dict(
-                        text=(
-                            f"<b>{int(dados_genero['desligamentos'].sum())}</b><br>"
-                            "total"
-                        ),
-                        x=0.5,
-                        y=0.5,
-                        showarrow=False,
-                        font=dict(color="#f8fafc", size=18),
-                    )
-                ],
-                margin=dict(l=8, r=8, t=14, b=44),
-                height=500,
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#f8fafc"),
-            )
-
-            st.plotly_chart(fig_rosca, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def render_desligamentos(df: pd.DataFrame) -> None:
