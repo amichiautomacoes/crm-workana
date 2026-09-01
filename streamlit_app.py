@@ -380,13 +380,13 @@ def render_metric_card(
 ) -> str:
     detalhe = f'<div class="metric-detail">{detail}</div>' if detail else ""
     classes_valor = f"metric-value {value_class}".strip()
-    return f"""
-    <article class="metric-card" style="--accent: {accent};">
-        <div class="metric-label">{label}</div>
-        <div class="{classes_valor}">{value}</div>
-        {detalhe}
-    </article>
-    """
+    return (
+        f'<article class="metric-card" style="--accent: {accent};">'
+        f'<div class="metric-label">{label}</div>'
+        f'<div class="{classes_valor}">{value}</div>'
+        f"{detalhe}"
+        "</article>"
+    )
 
 
 def render_permanencia_cards(df: pd.DataFrame) -> None:
@@ -396,17 +396,15 @@ def render_permanencia_cards(df: pd.DataFrame) -> None:
     maior = permanencia.max() if not permanencia.empty else None
     menor = permanencia.min() if not permanencia.empty else None
 
-    st.markdown(
-        f"""
-        <section class="metric-grid">
-            {render_metric_card("Média de permanência", formatar_anos(media), "#0ea5e9")}
-            {render_metric_card("Mediana de permanência", formatar_anos(mediana), "#14b8a6")}
-            {render_metric_card("Maior permanência", formatar_anos(maior), "#6366f1")}
-            {render_metric_card("Menor permanência", formatar_anos(menor), "#f97316")}
-        </section>
-        """,
-        unsafe_allow_html=True,
+    cards = "".join(
+        [
+            render_metric_card("Média de permanência", formatar_anos(media), "#0ea5e9"),
+            render_metric_card("Mediana de permanência", formatar_anos(mediana), "#14b8a6"),
+            render_metric_card("Maior permanência", formatar_anos(maior), "#6366f1"),
+            render_metric_card("Menor permanência", formatar_anos(menor), "#f97316"),
+        ]
     )
+    st.markdown(f'<div class="metric-grid">{cards}</div>', unsafe_allow_html=True)
 
 
 def formatar_numero(valor: int) -> str:
@@ -820,40 +818,38 @@ def render_desligamento_cards(df: pd.DataFrame) -> None:
         f"{anos_registro} anos de registro" if anos_registro else ""
     )
 
-    st.markdown(
-        f"""
-        <section class="metric-grid">
-            {render_metric_card(
+    cards = "".join(
+        [
+            render_metric_card(
                 "Total de desligamentos",
                 f"{formatar_numero(total_desligamentos)} colaboradores",
                 "#0ea5e9",
                 "100% do histórico",
                 "metric-value-small",
-            )}
-            {render_metric_card(
+            ),
+            render_metric_card(
                 "Período observado",
                 periodo,
                 "#14b8a6",
                 detalhe_periodo,
-            )}
-            {render_metric_card(
+            ),
+            render_metric_card(
                 "Média anual de saídas",
                 f"{formatar_decimal(media_anual)} desligamentos/ano",
                 "#6366f1",
                 "",
                 "metric-value-small",
-            )}
-            {render_metric_card(
+            ),
+            render_metric_card(
                 "Média salarial por desligado",
                 formatar_moeda(media_salarial),
                 "#f97316",
                 "por colaborador desligado",
                 "metric-value-small",
-            )}
-        </section>
-        """,
-        unsafe_allow_html=True,
+            ),
+        ]
     )
+    st.markdown(f'<div class="metric-grid">{cards}</div>', unsafe_allow_html=True)
 
 
 def render_titulo_evolucao_desligamentos() -> None:
