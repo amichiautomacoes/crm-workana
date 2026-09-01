@@ -790,6 +790,162 @@ def render_scatter_permanencia_salario(df: pd.DataFrame) -> None:
         st.plotly_chart(fig, use_container_width=True)
 
 
+def render_titulo_scatter_desligamento_salario() -> None:
+    st.markdown(
+        (
+            '<h2 class="chart-section-title chart-section-title-dark">'
+            "Relação entre Desligamento e Salário"
+            "</h2>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def render_scatter_desligamento_salario(df: pd.DataFrame) -> None:
+    opcoes_cor = {
+        "Senioridade": "senioridade",
+        "Idade": "idade_faixa",
+        "Área": "area",
+    }
+
+    with st.container(border=True):
+        st.markdown('<span class="scatter-panel-marker"></span>', unsafe_allow_html=True)
+
+        titulo_col, filtro_col = st.columns([3.4, 1.2])
+        with titulo_col:
+            render_titulo_scatter_desligamento_salario()
+
+        with filtro_col:
+            dimensao = st.selectbox(
+                "Legenda por",
+                list(opcoes_cor.keys()),
+                key="scatter_desligamento_salario_dimensao",
+            )
+
+        coluna_cor = opcoes_cor[dimensao]
+        dados_scatter = df.dropna(
+            subset=["salario_valor", "ano_desligamento", "data_desligamento"]
+        ).copy()
+
+        if dados_scatter.empty:
+            st.info("Não há dados suficientes para cruzar desligamento e salário.")
+            return
+
+        grupo = dados_scatter[coluna_cor].astype("string").fillna("Sem dados")
+        dados_scatter["grupo_legenda"] = grupo.replace("", "Sem dados")
+        dados_scatter["salario_formatado"] = dados_scatter["salario_valor"].map(
+            formatar_moeda
+        )
+        dados_scatter["data_desligamento_formatada"] = dados_scatter[
+            "data_desligamento"
+        ].dt.strftime("%d/%m/%Y")
+        dados_scatter["salario_mil"] = dados_scatter["salario_valor"] / 1000
+        dados_scatter["ano_desligamento_valor"] = dados_scatter[
+            "ano_desligamento"
+        ].astype(int)
+
+        fig = px.scatter(
+            dados_scatter,
+            x="salario_mil",
+            y="ano_desligamento_valor",
+            color="grupo_legenda",
+            hover_name="nome_completo",
+            custom_data=[
+                "salario_formatado",
+                "data_desligamento_formatada",
+                "grupo_legenda",
+                "area",
+                "senioridade",
+            ],
+            labels={
+                "salario_mil": "Salário (R$ mil)",
+                "ano_desligamento_valor": "Ano de desligamento",
+                "grupo_legenda": dimensao,
+            },
+            color_discrete_sequence=[
+                "#8b5cf6",
+                "#06b6d4",
+                "#f97316",
+                "#14b8a6",
+                "#2563eb",
+                "#22c55e",
+                "#e879f9",
+                "#facc15",
+            ],
+        )
+
+        fig.update_traces(
+            marker=dict(
+                size=14,
+                opacity=0.88,
+                line=dict(width=2, color="rgba(255, 255, 255, .86)"),
+            ),
+            hovertemplate=(
+                "<b>%{hovertext}</b><br>"
+                "Salário: %{customdata[0]}<br>"
+                "Desligamento: %{customdata[1]}<br>"
+                f"{dimensao}: %{{customdata[2]}}<br>"
+                "Área: %{customdata[3]}<br>"
+                "Senioridade: %{customdata[4]}<extra></extra>"
+            ),
+        )
+
+        salario_medio = dados_scatter["salario_mil"].mean()
+        ano_medio = dados_scatter["ano_desligamento_valor"].mean()
+        fig.add_vline(
+            x=salario_medio,
+            line_dash="dash",
+            line_width=3,
+            line_color="rgba(226, 232, 240, .58)",
+        )
+        fig.add_hline(
+            y=ano_medio,
+            line_dash="dash",
+            line_width=3,
+            line_color="rgba(226, 232, 240, .58)",
+        )
+
+        anos = dados_scatter["ano_desligamento_valor"]
+        fig.update_layout(
+            legend_title_text=dimensao,
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            height=540,
+            margin=dict(l=12, r=16, t=18, b=10),
+            font=dict(color="#e5e7eb", size=14),
+            legend=dict(
+                bgcolor="rgba(3, 10, 31, .28)",
+                bordercolor="rgba(255,255,255,.14)",
+                borderwidth=1,
+                font=dict(color="#f8fafc", size=13),
+            ),
+            xaxis=dict(
+                title="Salário (R$ mil)",
+                tickprefix="R$ ",
+                ticksuffix=" mil",
+                separatethousands=False,
+                showgrid=True,
+                gridcolor="rgba(226, 232, 240, .72)",
+                zeroline=False,
+                title_font=dict(size=16, color="#f8fafc"),
+                tickfont=dict(color="#e5e7eb"),
+            ),
+            yaxis=dict(
+                title="Ano de desligamento",
+                tickmode="linear",
+                dtick=1,
+                range=[anos.min() - 0.6, anos.max() + 0.6],
+                showgrid=True,
+                gridcolor="rgba(226, 232, 240, .72)",
+                zeroline=False,
+                title_font=dict(size=16, color="#f8fafc"),
+                tickfont=dict(color="#e5e7eb"),
+            ),
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+
 def render_tempo_permanencia(df: pd.DataFrame) -> None:
     render_page_intro(
         "Ciclo de vida dos colaboradores",
@@ -1187,6 +1343,7 @@ def render_desligamentos(df: pd.DataFrame) -> None:
     render_grafico_evolucao_desligamentos(df)
     render_mapa_desligamentos(df)
     render_treemap_desligamentos(df)
+    render_scatter_desligamento_salario(df)
 
 
 def main() -> None:
