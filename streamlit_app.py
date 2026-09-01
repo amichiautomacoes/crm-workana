@@ -541,25 +541,31 @@ def render_titulo_treemap_permanencia() -> None:
 
 
 def render_treemap_permanencia_media(df: pd.DataFrame) -> None:
+    opcoes_dimensao = {
+        "Senioridade": "senioridade",
+        "Área": "area",
+        "Idade": "idade_faixa",
+    }
+
     with st.container(border=True):
         render_titulo_treemap_permanencia()
 
-        controle_col, vazio_col = st.columns([1.25, 3.75])
+        controle_col, vazio_col = st.columns([1.05, 3.95])
         with controle_col:
             dimensao = st.selectbox(
                 "Visualizar por",
-                ("Senioridade", "Área"),
+                list(opcoes_dimensao.keys()),
                 key="treemap_permanencia_dimensao",
             )
 
         with vazio_col:
             st.empty()
 
-        coluna = "senioridade" if dimensao == "Senioridade" else "area"
+        coluna = opcoes_dimensao[dimensao]
         dados_treemap = (
             df.dropna(subset=[coluna, "tempo_permanencia_anos"])
             .loc[lambda dados: dados[coluna].astype(str).str.strip() != ""]
-            .groupby(coluna, as_index=False)
+            .groupby(coluna, observed=False, as_index=False)
             .agg(
                 permanencia_media=("tempo_permanencia_anos", "mean"),
                 colaboradores=("nome_completo", "count"),
