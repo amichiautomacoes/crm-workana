@@ -107,6 +107,7 @@ streamlit run streamlit_app.py --server.port=8501 --server.address=0.0.0.0
 - cards de visao geral com total analisado, tempo medio de permanencia, idade media no desligamento e desligamentos por periodo;
 - filtros por localizacao, area, senioridade, idade e salario;
 - graficos por area e senioridade;
+- pagina dedicada para rotatividade por genero;
 - tabela completa;
 - download do CSV tratado.
 

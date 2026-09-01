@@ -47,7 +47,16 @@ PAIS_ISO3 = {
 PAGES = (
     "Tempo de permanência",
     "Desligamentos",
+    "Rotatividade por gênero",
 )
+CORES_GENERO = {
+    "Feminino": "#ec4899",
+    "Masculino": "#0ea5e9",
+}
+LABEL_GENERO = {
+    "Feminino": "Mulheres",
+    "Masculino": "Homens",
+}
 
 
 st.set_page_config(
@@ -413,6 +422,12 @@ def formatar_decimal(valor: float | None) -> str:
     if valor is None or pd.isna(valor):
         return "Sem dados"
     return f"{valor:.1f}".replace(".", ",")
+
+
+def formatar_percentual(valor: float | None) -> str:
+    if valor is None or pd.isna(valor):
+        return "Sem dados"
+    return f"{valor:.1f}%".replace(".", ",")
 
 
 def opcoes_coluna(df: pd.DataFrame, coluna: str) -> list[str]:
@@ -1346,6 +1361,261 @@ def render_desligamentos(df: pd.DataFrame) -> None:
     render_scatter_desligamento_salario(df)
 
 
+def filtrar_generos_principais(df: pd.DataFrame) -> pd.DataFrame:
+    return df[df["genero"].isin(CORES_GENERO.keys())].copy()
+
+
+def render_genero_cards(df: pd.DataFrame) -> None:
+    dados_genero = filtrar_generos_principais(df)
+    desligados = dados_genero.dropna(subset=["data_desligamento"]).copy()
+
+    permanencia_media = (
+        dados_genero.dropna(subset=["tempo_permanencia_anos"])
+        .groupby("genero")["tempo_permanencia_anos"]
+        .mean()
+    )
+    saidas = desligados["genero"].value_counts()
+    total_saidas = int(saidas.sum())
+
+    def saidas_genero(genero: str) -> int:
+        return int(saidas.get(genero, 0))
+
+    def percentual_genero(genero: str) -> float | None:
+        if total_saidas == 0:
+            return None
+        return saidas_genero(genero) / total_saidas * 100
+
+    cards = "".join(
+        [
+            render_metric_card(
+                "Permanência média feminina",
+                formatar_anos(permanencia_media.get("Feminino")),
+                CORES_GENERO["Feminino"],
+            ),
+            render_metric_card(
+                "Permanência média masculina",
+                formatar_anos(permanencia_media.get("Masculino")),
+                CORES_GENERO["Masculino"],
+            ),
+            render_metric_card(
+                "Base desligada feminina",
+                formatar_percentual(percentual_genero("Feminino")),
+                CORES_GENERO["Feminino"],
+                f"{saidas_genero('Feminino')} saídas",
+            ),
+            render_metric_card(
+                "Base desligada masculina",
+                formatar_percentual(percentual_genero("Masculino")),
+                CORES_GENERO["Masculino"],
+                f"{saidas_genero('Masculino')} saídas",
+            ),
+        ]
+    )
+    st.markdown(f'<div class="metric-grid">{cards}</div>', unsafe_allow_html=True)
+
+
+def render_titulo_evolucao_genero() -> None:
+    st.markdown(
+        '<h2 class="chart-section-title">Evolução Temporal das Saídas por Gênero</h2>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_evolucao_desligamentos_genero(df: pd.DataFrame) -> None:
+    with st.container(border=True):
+        render_titulo_evolucao_genero()
+
+        dados_genero = filtrar_generos_principais(df)
+        desligados = dados_genero.dropna(
+            subset=["data_desligamento", "ano_desligamento", "genero"]
+        ).copy()
+
+        if desligados.empty:
+            st.info("Não há dados suficientes para montar a evolução por gênero.")
+            return
+
+        anos = list(range(2012, 2024))
+        generos = ["Masculino", "Feminino"]
+        anos_base = pd.MultiIndex.from_product(
+            [anos, generos],
+            names=["Ano de desligamento", "genero"],
+        ).to_frame(index=False)
+
+        evolucao = (
+            desligados.assign(
+                **{
+                    "Ano de desligamento": lambda dados: dados[
+                        "ano_desligamento"
+                    ].astype(int)
+                }
+            )
+            .groupby(["Ano de desligamento", "genero"], observed=False, as_index=False)
+            .size()
+            .rename(columns={"size": "Saídas"})
+        )
+        evolucao = anos_base.merge(
+            evolucao,
+            on=["Ano de desligamento", "genero"],
+            how="left",
+        ).fillna({"Saídas": 0})
+        evolucao["Saídas"] = evolucao["Saídas"].astype(int)
+        evolucao["Gênero"] = evolucao["genero"].map(LABEL_GENERO)
+
+        fig = px.line(
+            evolucao,
+            x="Ano de desligamento",
+            y="Saídas",
+            color="Gênero",
+            markers=True,
+            color_discrete_map={
+                "Homens": CORES_GENERO["Masculino"],
+                "Mulheres": CORES_GENERO["Feminino"],
+            },
+            labels={
+                "Ano de desligamento": "Ano de desligamento",
+                "Saídas": "Número de saídas",
+                "Gênero": "Gênero",
+            },
+        )
+        fig.update_traces(
+            line=dict(width=4, shape="spline", smoothing=0.55),
+            marker=dict(
+                size=10,
+                line=dict(width=2.4, color="#ffffff"),
+            ),
+            hovertemplate=(
+                "Ano: %{x}<br>"
+                "Gênero: %{fullData.name}<br>"
+                "Saídas: %{y}<extra></extra>"
+            ),
+        )
+        fig.update_layout(
+            legend_title_text="Gênero",
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=8, r=8, t=14, b=8),
+            height=430,
+            xaxis=dict(
+                title="Ano de desligamento",
+                tickmode="linear",
+                dtick=1,
+                range=[2011.7, 2023.3],
+                showgrid=False,
+            ),
+            yaxis=dict(
+                title="Número de saídas",
+                rangemode="tozero",
+                dtick=1,
+                showgrid=True,
+                gridcolor="#e2e8f0",
+            ),
+            font=dict(color="#0f172a"),
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+
+def render_titulo_permanencia_area_genero() -> None:
+    st.markdown(
+        '<h2 class="chart-section-title">Permanência por Área e Gênero</h2>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_permanencia_area_genero(df: pd.DataFrame) -> None:
+    with st.container(border=True):
+        render_titulo_permanencia_area_genero()
+
+        dados_genero = filtrar_generos_principais(df)
+        dados_area = (
+            dados_genero.dropna(subset=["area", "genero", "tempo_permanencia_anos"])
+            .loc[lambda dados: dados["area"].astype(str).str.strip() != ""]
+            .groupby(["area", "genero"], observed=False, as_index=False)
+            .agg(
+                permanencia_media=("tempo_permanencia_anos", "mean"),
+                colaboradores=("nome_completo", "count"),
+            )
+        )
+
+        if dados_area.empty:
+            st.info("Não há dados suficientes para montar a permanência por área e gênero.")
+            return
+
+        ordem_area = (
+            dados_area.groupby("area", observed=False)["permanencia_media"]
+            .mean()
+            .sort_values(ascending=True)
+            .index.tolist()
+        )
+        dados_area["Permanência média"] = dados_area["permanencia_media"].round(1)
+        dados_area["Tempo formatado"] = dados_area["permanencia_media"].map(formatar_anos)
+        dados_area["Gênero"] = dados_area["genero"].map(LABEL_GENERO)
+
+        fig = px.bar(
+            dados_area,
+            x="Permanência média",
+            y="area",
+            color="Gênero",
+            orientation="h",
+            barmode="group",
+            text="Tempo formatado",
+            custom_data=["Tempo formatado", "colaboradores"],
+            color_discrete_map={
+                "Homens": CORES_GENERO["Masculino"],
+                "Mulheres": CORES_GENERO["Feminino"],
+            },
+            category_orders={"area": ordem_area},
+            labels={
+                "Permanência média": "Permanência média (anos)",
+                "area": "Área",
+                "Gênero": "Gênero",
+            },
+        )
+        fig.update_traces(
+            textposition="outside",
+            cliponaxis=False,
+            marker_line_width=1.4,
+            marker_line_color="rgba(255,255,255,.86)",
+            hovertemplate=(
+                "Área: %{y}<br>"
+                "Gênero: %{fullData.name}<br>"
+                "Permanência média: %{customdata[0]}<br>"
+                "Colaboradores: %{customdata[1]}<extra></extra>"
+            ),
+        )
+        fig.update_layout(
+            legend_title_text="Gênero",
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=8, r=96, t=14, b=8),
+            height=470,
+            xaxis=dict(
+                title="Permanência média (anos)",
+                ticksuffix=" anos",
+                rangemode="tozero",
+                showgrid=True,
+                gridcolor="#e2e8f0",
+            ),
+            yaxis=dict(
+                title="Área",
+                showgrid=False,
+            ),
+            font=dict(color="#0f172a"),
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+
+def render_rotatividade_genero(df: pd.DataFrame) -> None:
+    render_page_intro(
+        "Rotatividade por gênero",
+        "Compara <strong>permanência média</strong> e <strong>saídas</strong> entre mulheres e homens.",
+    )
+    render_genero_cards(df)
+    render_evolucao_desligamentos_genero(df)
+    render_permanencia_area_genero(df)
+
+
 def main() -> None:
     aplicar_estilos()
     pagina = render_sidebar()
@@ -1360,6 +1630,8 @@ def main() -> None:
         render_tempo_permanencia(df)
     elif pagina == "Desligamentos":
         render_desligamentos(df)
+    elif pagina == "Rotatividade por gênero":
+        render_rotatividade_genero(df)
 
 
 if __name__ == "__main__":
