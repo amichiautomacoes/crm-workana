@@ -176,6 +176,7 @@ def aplicar_estilos() -> None:
             margin-top: 12px;
         }}
         .chart-section-title {{
+            border-left: 6px solid #14b8a6;
             box-sizing: border-box;
             color: #0f172a;
             display: block;
@@ -184,18 +185,14 @@ def aplicar_estilos() -> None:
             line-height: 1.18;
             letter-spacing: 0;
             margin: 2px 0 20px;
-            padding-left: 28px !important;
-            position: relative;
+            padding: 2px 0 2px 20px !important;
+        }}
+        h2.chart-section-title {{
+            font-size: 1.48rem !important;
+            margin: 2px 0 20px !important;
         }}
         .chart-section-title::before {{
-            content: "";
-            position: absolute;
-            left: 0;
-            top: 2px;
-            bottom: 2px;
-            width: 5px;
-            border-radius: 999px;
-            background: linear-gradient(180deg, #0ea5e9, #14b8a6);
+            content: none;
         }}
         div[data-testid="stVerticalBlockBorderWrapper"] {{
             background:
@@ -256,10 +253,8 @@ def aplicar_estilos() -> None:
             color: #e2e8f0;
         }}
         .chart-section-title-dark {{
+            border-left-color: #38bdf8;
             color: #f8fafc;
-        }}
-        .chart-section-title-dark::before {{
-            background: linear-gradient(180deg, #38bdf8, #a78bfa);
         }}
         .styled-table {{
             border-radius: 8px;
