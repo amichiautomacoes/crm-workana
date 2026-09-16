@@ -29,6 +29,12 @@ FAIXAS_IDADE = (
     "36 a 45 anos",
     "Acima de 45 anos",
 )
+FAIXAS_SALARIO = (
+    "Até R$ 2.000",
+    "R$ 2.001 a R$ 4.000",
+    "R$ 4.001 a R$ 6.000",
+    "Acima de R$ 6.000",
+)
 FILTROS_PERMANENCIA = {
     "Área": "area",
     "Senioridade": "senioridade",
@@ -342,7 +348,7 @@ def enriquecer_rotatividade(df: pd.DataFrame) -> pd.DataFrame:
     dados["salario_faixa"] = pd.cut(
         dados["salario_valor"],
         bins=[float("-inf"), 2000, 4000, 6000, float("inf")],
-        labels=("Até R$ 2.000", "R$ 2.001 a R$ 4.000", "R$ 4.001 a R$ 6.000", "Acima de R$ 6.000"),
+        labels=FAIXAS_SALARIO,
         right=True,
     )
     dados["ano_contratacao"] = dados["data_contratacao"].dt.year.astype("Int64")
@@ -435,6 +441,15 @@ def opcoes_coluna(df: pd.DataFrame, coluna: str) -> list[str]:
     return sorted(valor for valor in valores.unique().tolist() if valor)
 
 
+def opcoes_filtro(df: pd.DataFrame, coluna: str) -> list[str]:
+    opcoes = opcoes_coluna(df, coluna)
+    if coluna == "idade_faixa":
+        return [faixa for faixa in FAIXAS_IDADE if faixa in opcoes]
+    if coluna == "salario_faixa":
+        return [faixa for faixa in FAIXAS_SALARIO if faixa in opcoes]
+    return opcoes
+
+
 def aplicar_filtro_permanencia(df: pd.DataFrame, coluna: str, valores: list[str]) -> pd.DataFrame:
     if not valores:
         return df
@@ -466,7 +481,7 @@ def render_grafico_perfil_retencao(df: pd.DataFrame) -> None:
         with valores_col:
             valores_filtro = st.multiselect(
                 criterio,
-                opcoes_coluna(df, coluna_filtro),
+                opcoes_filtro(df, coluna_filtro),
                 key=f"permanencia_filtro_{coluna_filtro}",
                 placeholder="Todos",
             )
@@ -557,6 +572,7 @@ def render_treemap_permanencia_media(df: pd.DataFrame) -> None:
         "Senioridade": "senioridade",
         "Área": "area",
         "Idade": "idade_faixa",
+        "Salário": "salario_faixa",
     }
 
     with st.container(border=True):
@@ -1033,59 +1049,54 @@ def render_titulo_evolucao_desligamentos() -> None:
 
 
 def render_grafico_evolucao_desligamentos(df: pd.DataFrame) -> None:
-    opcoes_dimensao = {
-        "Senioridade": "senioridade",
-        "Área": "area",
-        "Idade": "idade_faixa",
-    }
-
     with st.container(border=True):
         render_titulo_evolucao_desligamentos()
 
-        controle_col, vazio_col = st.columns([1.05, 3.95])
-        with controle_col:
-            dimensao = st.selectbox(
-                "Visualizar por",
-                list(opcoes_dimensao.keys()),
+        criterio_col, valores_col, vazio_col = st.columns([1.05, 1.55, 2.4])
+        with criterio_col:
+            criterio = st.selectbox(
+                "Filtrar por",
+                list(FILTROS_PERMANENCIA.keys()),
                 index=1,
-                key="evolucao_desligamentos_dimensao",
+                key="evolucao_desligamentos_filtro_criterio",
+            )
+
+        coluna_filtro = FILTROS_PERMANENCIA[criterio]
+
+        with valores_col:
+            valores_filtro = st.multiselect(
+                criterio,
+                opcoes_filtro(df, coluna_filtro),
+                key=f"evolucao_desligamentos_filtro_{coluna_filtro}",
+                placeholder="Todos",
             )
 
         with vazio_col:
             st.empty()
 
-        coluna = opcoes_dimensao[dimensao]
         anos = list(range(2012, 2024))
-        categorias = opcoes_coluna(df, coluna)
-        if coluna == "idade_faixa":
-            categorias = [faixa for faixa in FAIXAS_IDADE if faixa in categorias]
-
-        if not categorias:
+        df_filtrado = aplicar_filtro_permanencia(df, coluna_filtro, valores_filtro)
+        if df_filtrado["ano_desligamento"].dropna().empty:
             st.info("Não há dados suficientes para montar a evolução dos desligamentos.")
             return
 
-        anos_base = pd.MultiIndex.from_product(
-            [anos, categorias],
-            names=["Ano de desligamento", dimensao],
-        ).to_frame(index=False)
+        anos_base = pd.DataFrame({"Ano de desligamento": anos})
         desligamentos_ano = (
-            df.dropna(subset=["ano_desligamento", coluna])
-            .loc[lambda dados: dados[coluna].astype(str).str.strip() != ""]
+            df_filtrado.dropna(subset=["ano_desligamento"])
             .assign(
                 **{
                     "Ano de desligamento": lambda dados: dados[
                         "ano_desligamento"
                     ].astype(int),
-                    dimensao: lambda dados: dados[coluna].astype(str),
                 }
             )
-            .groupby(["Ano de desligamento", dimensao], observed=False, as_index=False)
+            .groupby("Ano de desligamento", observed=False, as_index=False)
             .size()
             .rename(columns={"size": "Número de saídas"})
         )
         evolucao = anos_base.merge(
             desligamentos_ano,
-            on=["Ano de desligamento", dimensao],
+            on="Ano de desligamento",
             how="left",
         ).fillna({"Número de saídas": 0})
         evolucao["Número de saídas"] = evolucao["Número de saídas"].astype(int)
@@ -1094,12 +1105,10 @@ def render_grafico_evolucao_desligamentos(df: pd.DataFrame) -> None:
             evolucao,
             x="Ano de desligamento",
             y="Número de saídas",
-            color=dimensao,
             markers=True,
             labels={
                 "Ano de desligamento": "Ano de desligamento",
                 "Número de saídas": "Número de saídas",
-                dimensao: dimensao,
             },
             color_discrete_sequence=[
                 "#0ea5e9",
@@ -1119,14 +1128,12 @@ def render_grafico_evolucao_desligamentos(df: pd.DataFrame) -> None:
             ),
             hovertemplate=(
                 "Ano: %{x}<br>"
-                f"{dimensao}: %{{fullData.name}}<br>"
                 "Número de saídas: %{y}<extra></extra>"
             ),
         )
 
         fig.update_layout(
-            showlegend=True,
-            legend_title_text=dimensao,
+            showlegend=False,
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
             margin=dict(l=8, r=8, t=14, b=8),
@@ -1256,6 +1263,7 @@ def render_treemap_desligamentos(df: pd.DataFrame) -> None:
         "Senioridade": "senioridade",
         "Área": "area",
         "Idade": "idade_faixa",
+        "Salário": "salario_faixa",
     }
 
     with st.container(border=True):
@@ -1461,12 +1469,11 @@ def render_evolucao_desligamentos_genero(df: pd.DataFrame) -> None:
         evolucao["Saídas"] = evolucao["Saídas"].astype(int)
         evolucao["Gênero"] = evolucao["genero"].map(LABEL_GENERO)
 
-        fig = px.line(
+        fig = px.bar(
             evolucao,
             x="Ano de desligamento",
             y="Saídas",
             color="Gênero",
-            markers=True,
             color_discrete_map={
                 "Homens": CORES_GENERO["Masculino"],
                 "Mulheres": CORES_GENERO["Feminino"],
@@ -1478,11 +1485,8 @@ def render_evolucao_desligamentos_genero(df: pd.DataFrame) -> None:
             },
         )
         fig.update_traces(
-            line=dict(width=4, shape="spline", smoothing=0.55),
-            marker=dict(
-                size=10,
-                line=dict(width=2.4, color="#ffffff"),
-            ),
+            marker_line_width=1.2,
+            marker_line_color="rgba(255,255,255,.86)",
             hovertemplate=(
                 "Ano: %{x}<br>"
                 "Gênero: %{fullData.name}<br>"
@@ -1491,6 +1495,9 @@ def render_evolucao_desligamentos_genero(df: pd.DataFrame) -> None:
         )
         fig.update_layout(
             legend_title_text="Gênero",
+            barmode="group",
+            bargap=0.18,
+            bargroupgap=0.08,
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
             margin=dict(l=8, r=8, t=14, b=8),
