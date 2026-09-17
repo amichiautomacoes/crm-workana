@@ -195,7 +195,7 @@ def aplicar_estilos() -> None:
         .chart-section-title {{
             border-left: 6px solid #14b8a6;
             box-sizing: border-box;
-            color: #f8fafc;
+            color: #f8fafc !important;
             display: block;
             font-size: 1.48rem;
             font-weight: 850;
@@ -205,6 +205,7 @@ def aplicar_estilos() -> None:
             padding: 2px 0 2px 20px !important;
         }}
         h2.chart-section-title {{
+            color: #f8fafc !important;
             font-size: 1.48rem !important;
             margin: 2px 0 20px !important;
         }}
@@ -240,8 +241,18 @@ def aplicar_estilos() -> None:
             z-index: 1;
         }}
         div[data-testid="stVerticalBlockBorderWrapper"] label {{
-            color: #e2e8f0;
+            color: #e2e8f0 !important;
             font-weight: 750;
+        }}
+        div[data-testid="stVerticalBlockBorderWrapper"] .js-plotly-plot .plotly text {{
+            fill: #e5e7eb !important;
+        }}
+        div[data-testid="stVerticalBlockBorderWrapper"] .js-plotly-plot .plotly .legendtext,
+        div[data-testid="stVerticalBlockBorderWrapper"] .js-plotly-plot .plotly .legendtitletext,
+        div[data-testid="stVerticalBlockBorderWrapper"] .js-plotly-plot .plotly .gtitle,
+        div[data-testid="stVerticalBlockBorderWrapper"] .js-plotly-plot .plotly .xtitle,
+        div[data-testid="stVerticalBlockBorderWrapper"] .js-plotly-plot .plotly .ytitle {{
+            fill: #f8fafc !important;
         }}
         .scatter-panel-marker {{
             display: none;
@@ -269,11 +280,11 @@ def aplicar_estilos() -> None:
         }}
         div[data-testid="stVerticalBlockBorderWrapper"]:has(.scatter-panel-marker) label,
         div[data-testid="stVerticalBlockBorderWrapper"]:has(.dark-panel-marker) label {{
-            color: #e2e8f0;
+            color: #e2e8f0 !important;
         }}
         .chart-section-title-dark {{
             border-left-color: #38bdf8;
-            color: #f8fafc;
+            color: #f8fafc !important;
         }}
         .styled-table {{
             border-radius: 8px;
@@ -555,11 +566,16 @@ def render_grafico_perfil_retencao(df: pd.DataFrame) -> None:
                 dtick=1,
                 showgrid=True,
                 gridcolor="rgba(226,232,240,.35)",
+                tickfont=dict(color="#e5e7eb"),
+                title_font=dict(color="#f8fafc"),
             ),
             yaxis=dict(
                 title="Anos",
                 autorange="reversed",
+                tickfont=dict(color="#e5e7eb"),
+                title_font=dict(color="#f8fafc"),
             ),
+            legend=dict(font=dict(color="#e5e7eb"), title_font=dict(color="#f8fafc")),
             font=dict(color="#e5e7eb"),
         )
 
