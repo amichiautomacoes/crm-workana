@@ -16,7 +16,7 @@ from src.transformacao import transformar_dataframe
 load_dotenv()
 
 APP_TITLE = "Painel de Rotatividade de Colaboradores"
-BUILD_ID = os.getenv("APP_BUILD_ID", "tema-dark-v3")
+BUILD_ID = os.getenv("APP_BUILD_ID", "tema-dark-v4")
 BACKGROUND_PATH = Path("assets/backgraoundworkana.png")
 DATE_COLUMNS = ("data_nascimento", "data_contratacao", "data_desligamento")
 FAIXAS_PERMANENCIA = (
@@ -113,6 +113,19 @@ def aplicar_estilos() -> None:
         }}
         [data-testid="stSidebar"] * {{
             color: #f8fafc;
+        }}
+        .stApp [data-testid="stWidgetLabel"],
+        .stApp [data-testid="stWidgetLabel"] *,
+        .stApp [data-testid="stSelectbox"] > label,
+        .stApp [data-testid="stSelectbox"] > label *,
+        .stApp [data-testid="stMultiSelect"] > label,
+        .stApp [data-testid="stMultiSelect"] > label * {{
+            color: #f8fafc !important;
+        }}
+        .stApp .js-plotly-plot .plotly .legend text,
+        .stApp .js-plotly-plot .plotly .legendtext,
+        .stApp .js-plotly-plot .plotly .legendtitletext {{
+            fill: #f8fafc !important;
         }}
         .page-intro {{
             background:
@@ -583,7 +596,10 @@ def render_grafico_perfil_retencao(df: pd.DataFrame) -> None:
                 tickfont=dict(color="#e5e7eb"),
                 title_font=dict(color="#f8fafc"),
             ),
-            legend=dict(font=dict(color="#e5e7eb"), title_font=dict(color="#f8fafc")),
+            legend=dict(
+                font=dict(color="#f8fafc"),
+                title=dict(font=dict(color="#f8fafc")),
+            ),
             font=dict(color="#e5e7eb"),
         )
 
@@ -1177,6 +1193,8 @@ def render_grafico_evolucao_desligamentos(df: pd.DataFrame) -> None:
                 dtick=1,
                 range=[2011.7, 2023.3],
                 showgrid=False,
+                tickfont=dict(color="#e5e7eb"),
+                title_font=dict(color="#f8fafc"),
             ),
             yaxis=dict(
                 title="Número de saídas",
@@ -1184,8 +1202,13 @@ def render_grafico_evolucao_desligamentos(df: pd.DataFrame) -> None:
                 dtick=1,
                 showgrid=True,
                 gridcolor="rgba(226,232,240,.35)",
+                tickfont=dict(color="#e5e7eb"),
+                title_font=dict(color="#f8fafc"),
             ),
-            legend=dict(font=dict(color="#e5e7eb"), title_font=dict(color="#f8fafc")),
+            legend=dict(
+                font=dict(color="#f8fafc"),
+                title=dict(font=dict(color="#f8fafc")),
+            ),
             font=dict(color="#e5e7eb"),
         )
 
@@ -1542,6 +1565,8 @@ def render_evolucao_desligamentos_genero(df: pd.DataFrame) -> None:
                 dtick=1,
                 range=[2011.7, 2023.3],
                 showgrid=False,
+                tickfont=dict(color="#e5e7eb"),
+                title_font=dict(color="#f8fafc"),
             ),
             yaxis=dict(
                 title="Número de saídas",
@@ -1549,8 +1574,13 @@ def render_evolucao_desligamentos_genero(df: pd.DataFrame) -> None:
                 dtick=1,
                 showgrid=True,
                 gridcolor="rgba(226,232,240,.35)",
+                tickfont=dict(color="#e5e7eb"),
+                title_font=dict(color="#f8fafc"),
             ),
-            legend=dict(font=dict(color="#e5e7eb"), title_font=dict(color="#f8fafc")),
+            legend=dict(
+                font=dict(color="#f8fafc"),
+                title=dict(font=dict(color="#f8fafc")),
+            ),
             font=dict(color="#e5e7eb"),
         )
 
@@ -1647,7 +1677,10 @@ def render_permanencia_area_genero(df: pd.DataFrame) -> None:
                 tickfont=dict(color="#e5e7eb"),
                 title_font=dict(color="#f8fafc"),
             ),
-            legend=dict(font=dict(color="#e5e7eb"), title_font=dict(color="#f8fafc")),
+            legend=dict(
+                font=dict(color="#f8fafc"),
+                title=dict(font=dict(color="#f8fafc")),
+            ),
             font=dict(color="#e5e7eb"),
         )
 
