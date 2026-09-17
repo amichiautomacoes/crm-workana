@@ -562,7 +562,7 @@ def render_grafico_perfil_retencao(df: pd.DataFrame) -> None:
 
 def render_titulo_treemap_permanencia() -> None:
     st.markdown(
-        '<h2 class="chart-section-title">Tempo Médio de Permanência</h2>',
+        '<h2 class="chart-section-title chart-section-title-dark">Tempo Médio de Permanência</h2>',
         unsafe_allow_html=True,
     )
 
@@ -576,6 +576,7 @@ def render_treemap_permanencia_media(df: pd.DataFrame) -> None:
     }
 
     with st.container(border=True):
+        st.markdown('<span class="dark-panel-marker"></span>', unsafe_allow_html=True)
         render_titulo_treemap_permanencia()
 
         controle_col, vazio_col = st.columns([1.05, 3.95])
@@ -651,12 +652,14 @@ def render_treemap_permanencia_media(df: pd.DataFrame) -> None:
                 title="Anos",
                 thickness=14,
                 len=0.72,
+                tickfont=dict(color="#cbd5e1"),
+                title_font=dict(color="#f8fafc"),
             ),
             margin=dict(l=8, r=8, t=14, b=8),
             height=470,
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#0f172a"),
+            font=dict(color="#f8fafc"),
         )
 
         st.plotly_chart(fig, use_container_width=True)
@@ -1524,13 +1527,14 @@ def render_evolucao_desligamentos_genero(df: pd.DataFrame) -> None:
 
 def render_titulo_permanencia_area_genero() -> None:
     st.markdown(
-        '<h2 class="chart-section-title">Permanência por Área e Gênero</h2>',
+        '<h2 class="chart-section-title chart-section-title-dark">Permanência por Área e Gênero</h2>',
         unsafe_allow_html=True,
     )
 
 
 def render_permanencia_area_genero(df: pd.DataFrame) -> None:
     with st.container(border=True):
+        st.markdown('<span class="dark-panel-marker"></span>', unsafe_allow_html=True)
         render_titulo_permanencia_area_genero()
 
         dados_genero = filtrar_generos_principais(df)
@@ -1601,13 +1605,18 @@ def render_permanencia_area_genero(df: pd.DataFrame) -> None:
                 ticksuffix=" anos",
                 rangemode="tozero",
                 showgrid=True,
-                gridcolor="#e2e8f0",
+                gridcolor="rgba(226,232,240,.35)",
+                tickfont=dict(color="#e5e7eb"),
+                title_font=dict(color="#f8fafc"),
             ),
             yaxis=dict(
                 title="Área",
                 showgrid=False,
+                tickfont=dict(color="#e5e7eb"),
+                title_font=dict(color="#f8fafc"),
             ),
-            font=dict(color="#0f172a"),
+            legend=dict(font=dict(color="#e5e7eb"), title_font=dict(color="#f8fafc")),
+            font=dict(color="#e5e7eb"),
         )
 
         st.plotly_chart(fig, use_container_width=True)
