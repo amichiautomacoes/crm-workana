@@ -244,6 +244,14 @@ def aplicar_estilos() -> None:
             color: #e2e8f0 !important;
             font-weight: 750;
         }}
+        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stWidgetLabel"],
+        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stWidgetLabel"] *,
+        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stSelectbox"] label,
+        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stMultiSelect"] label,
+        div[data-testid="stVerticalBlockBorderWrapper"] [data-baseweb="select"] ~ div,
+        div[data-testid="stVerticalBlockBorderWrapper"] p {{
+            color: #f8fafc !important;
+        }}
         div[data-testid="stVerticalBlockBorderWrapper"] .js-plotly-plot .plotly text {{
             fill: #e5e7eb !important;
         }}
@@ -1177,6 +1185,7 @@ def render_grafico_evolucao_desligamentos(df: pd.DataFrame) -> None:
                 showgrid=True,
                 gridcolor="rgba(226,232,240,.35)",
             ),
+            legend=dict(font=dict(color="#e5e7eb"), title_font=dict(color="#f8fafc")),
             font=dict(color="#e5e7eb"),
         )
 
@@ -1541,6 +1550,7 @@ def render_evolucao_desligamentos_genero(df: pd.DataFrame) -> None:
                 showgrid=True,
                 gridcolor="rgba(226,232,240,.35)",
             ),
+            legend=dict(font=dict(color="#e5e7eb"), title_font=dict(color="#f8fafc")),
             font=dict(color="#e5e7eb"),
         )
 
