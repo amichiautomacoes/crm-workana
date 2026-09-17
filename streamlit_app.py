@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -15,6 +16,7 @@ from src.transformacao import transformar_dataframe
 load_dotenv()
 
 APP_TITLE = "Painel de Rotatividade de Colaboradores"
+BUILD_ID = os.getenv("APP_BUILD_ID", "2ba4ba1")
 BACKGROUND_PATH = Path("assets/backgraoundworkana.png")
 DATE_COLUMNS = ("data_nascimento", "data_contratacao", "data_desligamento")
 FAIXAS_PERMANENCIA = (
@@ -361,11 +363,13 @@ def enriquecer_rotatividade(df: pd.DataFrame) -> pd.DataFrame:
 def render_sidebar() -> str:
     with st.sidebar:
         st.title("Navegação")
-        return st.radio(
+        pagina = st.radio(
             "Página",
             PAGES,
             label_visibility="collapsed",
         )
+        st.caption(f"Build {BUILD_ID}")
+        return pagina
 
 
 def render_page_intro(titulo: str, subtitulo: str) -> None:
