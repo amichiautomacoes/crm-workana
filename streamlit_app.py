@@ -16,7 +16,7 @@ from src.transformacao import transformar_dataframe
 load_dotenv()
 
 APP_TITLE = "Painel de Rotatividade de Colaboradores"
-BUILD_ID = os.getenv("APP_BUILD_ID", "2ba4ba1")
+BUILD_ID = os.getenv("APP_BUILD_ID", "tema-dark-v3")
 BACKGROUND_PATH = Path("assets/backgraoundworkana.png")
 DATE_COLUMNS = ("data_nascimento", "data_contratacao", "data_desligamento")
 FAIXAS_PERMANENCIA = (
