@@ -193,7 +193,7 @@ def aplicar_estilos() -> None:
         .chart-section-title {{
             border-left: 6px solid #14b8a6;
             box-sizing: border-box;
-            color: #0f172a;
+            color: #f8fafc;
             display: block;
             font-size: 1.48rem;
             font-weight: 850;
@@ -211,13 +211,15 @@ def aplicar_estilos() -> None:
         }}
         div[data-testid="stVerticalBlockBorderWrapper"] {{
             background:
-                linear-gradient(145deg, rgba(255, 255, 255, .98), rgba(232, 240, 248, .92));
-            border: 1px solid rgba(255, 255, 255, .88);
+                radial-gradient(circle at 84% 10%, rgba(99, 102, 241, .22), transparent 28%),
+                radial-gradient(circle at 92% 86%, rgba(20, 184, 166, .18), transparent 34%),
+                linear-gradient(145deg, rgba(7, 19, 54, .98), rgba(3, 10, 31, .96));
+            border: 1px solid rgba(148, 163, 184, .44);
             border-radius: 8px;
             box-shadow:
-                0 28px 70px rgba(0, 0, 0, .34),
-                0 10px 22px rgba(15, 23, 42, .16),
-                inset 0 1px 0 rgba(255, 255, 255, .92);
+                0 34px 90px rgba(0, 0, 0, .42),
+                0 12px 28px rgba(15, 23, 42, .28),
+                inset 0 1px 0 rgba(255, 255, 255, .18);
             overflow: hidden;
             padding: 24px 26px 18px;
             position: relative;
@@ -227,8 +229,8 @@ def aplicar_estilos() -> None:
             position: absolute;
             inset: 0;
             background:
-                radial-gradient(circle at 18% 0%, rgba(14, 165, 233, .18), transparent 34%),
-                radial-gradient(circle at 88% 16%, rgba(20, 184, 166, .14), transparent 30%);
+                linear-gradient(135deg, rgba(255, 255, 255, .08), transparent 42%),
+                radial-gradient(circle at 24% 72%, rgba(14, 165, 233, .1), transparent 30%);
             pointer-events: none;
         }}
         div[data-testid="stVerticalBlockBorderWrapper"] > div {{
@@ -236,7 +238,7 @@ def aplicar_estilos() -> None:
             z-index: 1;
         }}
         div[data-testid="stVerticalBlockBorderWrapper"] label {{
-            color: #334155;
+            color: #e2e8f0;
             font-weight: 750;
         }}
         .scatter-panel-marker {{
@@ -548,13 +550,13 @@ def render_grafico_perfil_retencao(df: pd.DataFrame) -> None:
                 rangemode="tozero",
                 dtick=1,
                 showgrid=True,
-                gridcolor="#e2e8f0",
+                gridcolor="rgba(226,232,240,.35)",
             ),
             yaxis=dict(
                 title="Anos",
                 autorange="reversed",
             ),
-            font=dict(color="#0f172a"),
+            font=dict(color="#e5e7eb"),
         )
 
         st.plotly_chart(fig, use_container_width=True)
@@ -1153,9 +1155,9 @@ def render_grafico_evolucao_desligamentos(df: pd.DataFrame) -> None:
                 rangemode="tozero",
                 dtick=1,
                 showgrid=True,
-                gridcolor="#e2e8f0",
+                gridcolor="rgba(226,232,240,.35)",
             ),
-            font=dict(color="#0f172a"),
+            font=dict(color="#e5e7eb"),
         )
 
         st.plotly_chart(fig, use_container_width=True)
@@ -1242,7 +1244,7 @@ def render_mapa_desligamentos(df: pd.DataFrame) -> None:
             height=520,
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#0f172a"),
+            font=dict(color="#e5e7eb"),
             geo=dict(
                 bgcolor="rgba(0,0,0,0)",
                 projection_type="natural earth",
@@ -1335,7 +1337,7 @@ def render_treemap_desligamentos(df: pd.DataFrame) -> None:
         )
         fig.update_traces(
             texttemplate="<b>%{label}</b><br>%{customdata[0]}",
-            textfont=dict(size=17, color="#0f172a"),
+            textfont=dict(size=17, color="#f8fafc"),
             marker=dict(line=dict(width=3, color="#ffffff")),
             root_color="rgba(255,255,255,.24)",
             hovertemplate=(
@@ -1348,9 +1350,9 @@ def render_treemap_desligamentos(df: pd.DataFrame) -> None:
             coloraxis_showscale=False,
             margin=dict(l=8, r=8, t=14, b=8),
             height=500,
-            paper_bgcolor="rgba(255,255,255,.92)",
-            plot_bgcolor="rgba(255,255,255,.92)",
-            font=dict(color="#0f172a"),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#e5e7eb"),
         )
 
         st.plotly_chart(fig, use_container_width=True)
@@ -1517,9 +1519,9 @@ def render_evolucao_desligamentos_genero(df: pd.DataFrame) -> None:
                 rangemode="tozero",
                 dtick=1,
                 showgrid=True,
-                gridcolor="#e2e8f0",
+                gridcolor="rgba(226,232,240,.35)",
             ),
-            font=dict(color="#0f172a"),
+            font=dict(color="#e5e7eb"),
         )
 
         st.plotly_chart(fig, use_container_width=True)
